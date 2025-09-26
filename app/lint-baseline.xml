@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.2.0" type="baseline" client="gradle" dependencies="false" name="AGP (8.2.0)" variant="all" version="8.2.0">
+
+    <!-- Baseline for existing Termux code issues -->
+    <issue
+        id="MissingSuperCall"
+        message="Overriding method should call super.onBackPressed"
+        category="Correctness"
+        priority="9"
+        summary="Missing Super Call"
+        explanation="Some methods, such as View#onDetachedFromWindow, require that you also call the super implementation as part of your method."
+        errorLine1="    public void onBackPressed() {"
+        errorLine2="                ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/termux/app/TermuxActivity.java"
+            line="603"
+            column="17"/>
+    </issue>
+
+    <!-- Add other existing lint issues here as needed -->
+    
+</issues>

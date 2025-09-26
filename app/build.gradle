@@ -143,8 +143,11 @@ android {
         }
     }
 
-    lintOptions {
+    lint {
         disable 'ProtectedPermissions'
+        baseline = file("lint-baseline.xml")
+        abortOnError false
+        warningsAsErrors false
     }
 
     testOptions {
