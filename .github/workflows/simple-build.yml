@@ -76,17 +76,24 @@ jobs:
         cat local.properties 2>/dev/null || echo "No local.properties file"
         echo "Working directory: $(pwd)"
 
-    - name: Clean project
-      run: ./gradlew clean
+    - name: Clean project and free space
+      run: |
+        # Clean project
+        ./gradlew clean
+        
+        # Free up disk space
+        sudo apt-get clean
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+        docker system prune -af
+        
+        # Show available space
+        df -h
 
     - name: Download Alpine rootfs
       run: ./gradlew downloadBootstraps --info
 
     - name: Build debug APK
       run: ./gradlew assembleDebug --stacktrace
-
-    - name: Build release APK (unsigned)
-      run: ./gradlew assembleRelease --stacktrace
 
     - name: Collect build artifacts
       run: |
