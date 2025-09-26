@@ -14,6 +14,12 @@ ext {
     packageVariant = System.getenv("TERMUX_PACKAGE_VARIANT") ?: "apt-android-7" // Default: "apt-android-7"
 }
 
+configurations {
+    all {
+        exclude group: 'com.google.guava', module: 'listenablefuture'
+    }
+}
+
 android {
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
     ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
@@ -36,9 +42,7 @@ android {
         implementation "androidx.security:security-crypto:1.1.0-alpha06"
         implementation "androidx.recyclerview:recyclerview:1.3.2"
         implementation "com.google.android.material:material:1.11.0"
-        implementation("com.google.guava:guava:24.1-jre") {
-            exclude group: 'com.google.guava', module: 'listenablefuture'
-        }
+        implementation "com.google.guava:guava:24.1-jre"
         implementation "io.noties.markwon:core:$markwonVersion"
         implementation "io.noties.markwon:ext-strikethrough:$markwonVersion"
         implementation "io.noties.markwon:linkify:$markwonVersion"
