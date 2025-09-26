@@ -1,0 +1,95 @@
+name: Debug Environment
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Debug Android SDK Environment
+      run: |
+        echo "=== Environment Variables ==="
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        echo "PATH: $PATH"
+        echo ""
+        
+        echo "=== File System Check ==="
+        echo "Checking /usr/local/lib/android/sdk:"
+        ls -la /usr/local/lib/android/sdk/ 2>/dev/null || echo "Directory not found"
+        echo ""
+        
+        echo "Checking /usr/local/lib/android/sdk/cmdline-tools:"
+        ls -la /usr/local/lib/android/sdk/cmdline-tools/ 2>/dev/null || echo "Directory not found"
+        echo ""
+        
+        echo "=== Available Android Tools ==="
+        which sdkmanager 2>/dev/null || echo "sdkmanager not in PATH"
+        which adb 2>/dev/null || echo "adb not in PATH"
+        which gradle 2>/dev/null || echo "gradle not in PATH"
+        echo ""
+        
+        echo "=== Java Environment ==="
+        java -version
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo ""
+        
+        echo "=== Disk Space ==="
+        df -h
+        echo ""
+        
+        echo "=== Pre-installed Android SDK Components ==="
+        if [ -d "/usr/local/lib/android/sdk" ]; then
+          find /usr/local/lib/android/sdk -name "*.jar" | head -10
+          echo ""
+          find /usr/local/lib/android/sdk -name "*android*" | head -10
+        fi
+
+    - name: Test Android SDK Setup
+      run: |
+        # Clear conflicting environment variables
+        unset ANDROID_SDK_ROOT
+        export ANDROID_SDK_ROOT=""
+        
+        # Use existing Android SDK
+        if [ -d "/usr/local/lib/android/sdk" ]; then
+          echo "Setting up pre-installed Android SDK"
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export PATH=$PATH:/usr/local/lib/android/sdk/platform-tools:/usr/local/lib/android/sdk/cmdline-tools/latest/bin
+          
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          
+          echo "Testing sdkmanager:"
+          if [ -f "/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager" ]; then
+            /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --version 2>/dev/null || echo "sdkmanager failed"
+            /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --list 2>/dev/null | head -20 || echo "sdkmanager list failed"
+          else
+            echo "sdkmanager not found at expected location"
+            find /usr/local/lib/android/sdk -name "sdkmanager" -type f 2>/dev/null || echo "sdkmanager not found anywhere"
+          fi
+        fi
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Test Gradle Environment
+      run: |
+        # Final environment check
+        echo "=== Final Environment ==="
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        echo "JAVA_HOME: $JAVA_HOME"
+        
+        # Test gradlew
+        chmod +x gradlew
+        echo "Testing gradlew --version:"
+        ./gradlew --version || echo "Gradle version check failed"
