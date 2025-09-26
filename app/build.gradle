@@ -229,20 +229,76 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         def tempDir = new File(projectDir, "src/main/cpp/temp-" + arch)
         tempDir.mkdirs()
         
-        // Extract tar.gz
+        // Extract tar.gz with error handling
         def proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath].execute()
-        proc.waitFor()
+        def exitCode = proc.waitFor()
+        if (exitCode != 0) {
+            throw new GradleException("Failed to extract Alpine rootfs: tar command returned " + exitCode)
+        }
         
-        // Create zip
-        def ant = new groovy.util.AntBuilder()
-        ant.zip(destfile: file.absolutePath) {
-            fileset(dir: tempDir.absolutePath) {
-                include(name: "**/*")
+        // Remove problematic directories that cause zip issues
+        def problematicDirs = [
+            "var/run/systemd",
+            "dev",
+            "proc", 
+            "sys",
+            "run"
+        ]
+        
+        problematicDirs.each { dirPath ->
+            def dirToRemove = new File(tempDir, dirPath)
+            if (dirToRemove.exists()) {
+                logger.quiet("Removing problematic directory: " + dirPath)
+                dirToRemove.deleteDir()
             }
         }
         
-        // Clean up temp directory
-        tempDir.deleteDir()
+        // Create essential directories for Alpine
+        def essentialDirs = [
+            "tmp",
+            "var/tmp", 
+            "var/log",
+            "var/cache/apk",
+            "home/root"
+        ]
+        
+        essentialDirs.each { dirPath ->
+            def dirToCreate = new File(tempDir, dirPath)
+            dirToCreate.mkdirs()
+        }
+        
+        // Create zip with filtered content
+        try {
+            def ant = new groovy.util.AntBuilder()
+            ant.zip(destfile: file.absolutePath) {
+                fileset(dir: tempDir.absolutePath) {
+                    include(name: "**/*")
+                    // Exclude any remaining problematic patterns
+                    exclude(name: "**/systemd/**")
+                    exclude(name: "**/dev/**")
+                    exclude(name: "**/proc/**") 
+                    exclude(name: "**/sys/**")
+                    exclude(name: "**/*device*")
+                    exclude(name: "**/*run*")
+                }
+            }
+            
+            // Verify zip was created successfully
+            if (!file.exists() || file.length() == 0) {
+                throw new GradleException("Failed to create bootstrap zip for " + arch)
+            }
+            
+            logger.quiet("Successfully created bootstrap zip for " + arch + " (" + (file.length() / 1024 / 1024).round(2) + " MB)")
+            
+        } catch (Exception e) {
+            logger.error("Error creating zip for " + arch + ": " + e.getMessage())
+            throw new GradleException("Failed to create bootstrap zip: " + e.getMessage())
+        } finally {
+            // Clean up temp directory
+            if (tempDir.exists()) {
+                tempDir.deleteDir()
+            }
+        }
     }
 }
 
