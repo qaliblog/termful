@@ -22,28 +22,40 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Install Android SDK
+    - name: Setup Android SDK
       run: |
-        # Download and setup Android SDK
-        cd $HOME
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip -q commandlinetools-linux-11076708_latest.zip
-        mkdir -p android-sdk/cmdline-tools
-        mv cmdline-tools android-sdk/cmdline-tools/latest
+        # Clear conflicting environment variables
+        unset ANDROID_SDK_ROOT
+        echo "ANDROID_SDK_ROOT=" >> $GITHUB_ENV
         
-        # Set environment
-        export ANDROID_HOME=$HOME/android-sdk
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
-        
-        # Install SDK components
-        cd $ANDROID_HOME
-        yes | cmdline-tools/latest/bin/sdkmanager --licenses
-        cmdline-tools/latest/bin/sdkmanager "platform-tools"
-        cmdline-tools/latest/bin/sdkmanager "platforms;android-34"  
-        cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
-        cmdline-tools/latest/bin/sdkmanager "ndk;22.1.7171670"
+        # Use existing Android SDK if available, otherwise install manually
+        if [ -d "/usr/local/lib/android/sdk" ]; then
+          echo "Using pre-installed Android SDK"
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+          echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          
+          # Install missing components if needed
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;22.1.7171670" 2>/dev/null || true
+        else
+          echo "Installing Android SDK manually"
+          cd $HOME
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          mkdir -p android-sdk/cmdline-tools
+          mv cmdline-tools android-sdk/cmdline-tools/latest
+          
+          export ANDROID_HOME=$HOME/android-sdk
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+          
+          # Install SDK components
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;22.1.7171670"
+        fi
 
     - name: Make gradlew executable
       run: chmod +x gradlew
