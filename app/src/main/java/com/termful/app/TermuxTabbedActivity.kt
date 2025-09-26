@@ -1,4 +1,4 @@
-package com.termux.app
+package com.termful.app
 
 import android.content.ComponentName
 import android.content.Intent
@@ -17,11 +17,11 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import com.termux.R
-import com.termux.app.activities.SettingsActivity
-import com.termux.app.tabs.*
-import com.termux.app.terminal.TermuxSessionsListViewController
-import com.termux.shared.termux.shell.command.runner.terminal.TermuxSession
+import com.termful.R
+import com.termful.app.activities.SettingsActivity
+import com.termful.app.tabs.*
+import com.termful.app.terminal.TermuxSessionsListViewController
+import com.termful.shared.termux.shell.command.runner.terminal.TermuxSession
 import kotlinx.coroutines.launch
 
 /**

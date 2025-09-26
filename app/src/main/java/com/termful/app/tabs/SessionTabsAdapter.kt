@@ -1,8 +1,8 @@
-package com.termux.app.tabs
+package com.termful.app.tabs
 
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import com.termux.app.tabs.fragments.*
+import com.termful.app.tabs.fragments.*
 
 /**
  * ViewPager2 adapter for the 4-tab system

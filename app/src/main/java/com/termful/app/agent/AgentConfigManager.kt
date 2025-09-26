@@ -1,4 +1,4 @@
-package com.termux.app.agent
+package com.termful.app.agent
 
 import android.content.Context
 import android.content.SharedPreferences

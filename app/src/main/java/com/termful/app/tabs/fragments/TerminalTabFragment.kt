@@ -1,4 +1,4 @@
-package com.termux.app.tabs.fragments
+package com.termful.app.tabs.fragments
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -9,11 +9,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.termux.R
-import com.termux.app.tabs.SessionTabData
-import com.termux.app.tabs.SessionTabManager
-import com.termux.app.tabs.TerminalTabData
-import com.termux.view.TerminalView
+import com.termful.R
+import com.termful.app.tabs.SessionTabData
+import com.termful.app.tabs.SessionTabManager
+import com.termful.app.tabs.TerminalTabData
+import com.termful.view.TerminalView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

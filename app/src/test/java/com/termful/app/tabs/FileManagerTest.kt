@@ -1,4 +1,4 @@
-package com.termux.app.tabs
+package com.termful.app.tabs
 
 import org.junit.Before
 import org.junit.Test

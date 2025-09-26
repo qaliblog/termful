@@ -1,4 +1,4 @@
-package com.termux.app.tabs.fragments
+package com.termful.app.tabs.fragments
 
 import android.app.AlertDialog
 import android.os.Bundle
@@ -13,9 +13,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.termux.R
-import com.termux.app.tabs.EditorTabData
-import com.termux.app.tabs.SessionTabManager
+import com.termful.R
+import com.termful.app.tabs.EditorTabData
+import com.termful.app.tabs.SessionTabManager
 // import com.amrdeveloper.codeview.CodeView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

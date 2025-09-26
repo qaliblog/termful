@@ -1,4 +1,4 @@
-package com.termux.app.tabs.fragments
+package com.termful.app.tabs.fragments
 
 import android.app.AlertDialog
 import android.content.Intent
@@ -17,10 +17,10 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import com.termux.R
-import com.termux.app.activities.SettingsActivity
-import com.termux.app.agent.*
-import com.termux.app.tabs.*
+import com.termful.R
+import com.termful.app.activities.SettingsActivity
+import com.termful.app.agent.*
+import com.termful.app.tabs.*
 import kotlinx.coroutines.launch
 
 /**

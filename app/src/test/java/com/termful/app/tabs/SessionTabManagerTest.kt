@@ -1,7 +1,7 @@
-package com.termux.app.tabs
+package com.termful.app.tabs
 
 import android.content.Context
-import com.termux.shared.termux.shell.command.runner.terminal.TermuxSession
+import com.termful.shared.termux.shell.command.runner.terminal.TermuxSession
 import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.*

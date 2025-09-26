@@ -1,4 +1,4 @@
-package com.termux.app.agent
+package com.termful.app.agent
 
 import android.content.Context
 import kotlinx.coroutines.runBlocking

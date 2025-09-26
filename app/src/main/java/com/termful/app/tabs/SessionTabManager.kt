@@ -1,9 +1,9 @@
-package com.termux.app.tabs
+package com.termful.app.tabs
 
 import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.termux.shared.termux.shell.command.runner.terminal.TermuxSession
+import com.termful.shared.termux.shell.command.runner.terminal.TermuxSession
 import java.util.concurrent.ConcurrentHashMap
 
 /**

@@ -1,4 +1,4 @@
-package com.termux.app.tabs.fragments
+package com.termful.app.tabs.fragments
 
 import android.app.AlertDialog
 import android.os.Bundle
@@ -11,8 +11,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.termux.R
-import com.termux.app.tabs.*
+import com.termful.R
+import com.termful.app.tabs.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
