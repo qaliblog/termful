@@ -92,7 +92,7 @@ class TerminalTabFragment : Fragment() {
             val termuxSession = tabData?.termuxSession
             
             termuxSession?.let { session ->
-                terminalView?.attachSession(session)
+                terminalView?.attachSession(session.terminalSession)
                 // Terminal view setup would be handled by existing Termux code
             }
         }
@@ -139,7 +139,7 @@ class TerminalTabFragment : Fragment() {
         return withContext(Dispatchers.IO) {
             try {
                 // Get PID from the terminal session
-                val pid = termuxSession.executionCommand?.pid?.toString() ?: "unknown"
+                val pid = termuxSession.terminalSession.pid.toString()
                 
                 // Get working directory by reading from proc filesystem
                 val workingDir = try {
@@ -147,7 +147,7 @@ class TerminalTabFragment : Fragment() {
                     val reader = BufferedReader(InputStreamReader(process.inputStream))
                     reader.readLine() ?: "unknown"
                 } catch (e: Exception) {
-                    "unknown"
+                    termuxSession.terminalSession.cwd ?: "unknown"
                 }
                 
                 Pair(pid, workingDir)

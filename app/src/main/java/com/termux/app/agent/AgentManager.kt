@@ -273,8 +273,8 @@ class AgentProcess(
             
             # Function to call AI API
             call_ai_api() {
-                local message="$1"
-                local working_dir="$2"
+                local message="\$1"
+                local working_dir="\$2"
                 
                 # Read configuration and make API call
                 # This will be implemented to use the configured providers with rotation
@@ -339,8 +339,8 @@ if __name__ == '__main__':
             
             # Main communication loop
             while IFS= read -r line; do
-                if [ -n "$line" ]; then
-                    echo "$line" | call_ai_api
+                if [ -n "\$line" ]; then
+                    echo "\$line" | call_ai_api
                 fi
             done
         """.trimIndent()

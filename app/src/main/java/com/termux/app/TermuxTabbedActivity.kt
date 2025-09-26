@@ -102,17 +102,17 @@ class TermuxTabbedActivity : AppCompatActivity(), ServiceConnection {
             setupSessionsList(service)
             
             // Create initial session if none exist
-            if (service.termuxShellManager.mTermuxSessions.isEmpty()) {
+            if (service.mShellManager.mTermuxSessions.isEmpty()) {
                 createNewSession()
             } else {
                 // Initialize existing sessions
-                service.termuxShellManager.mTermuxSessions.forEach { termuxSession ->
+                service.mShellManager.mTermuxSessions.forEach { termuxSession ->
                     initializeSessionTabs(termuxSession)
                 }
                 
                 // Switch to first session
-                service.termuxShellManager.mTermuxSessions.firstOrNull()?.let { firstSession ->
-                    switchToSession(firstSession.mHandle)
+                service.mShellManager.mTermuxSessions.firstOrNull()?.let { firstSession ->
+                    switchToSession(firstSession.terminalSession.mHandle)
                 }
             }
         }
@@ -123,26 +123,25 @@ class TermuxTabbedActivity : AppCompatActivity(), ServiceConnection {
     }
     
     private fun setupSessionsList(service: TermuxService) {
-        sessionsListController = TermuxSessionsListViewController(
-            this,
-            terminalSessionsList!!
-        )
-        
-        sessionsListController?.let { controller ->
-            // Setup session selection listener
-            controller.setOnSessionSelectedListener { termuxSession ->
-                switchToSession(termuxSession.mHandle)
-                drawerLayout?.closeDrawers()
+        // For now, use a simple adapter approach until we can properly integrate
+        // with the existing TermuxSessionsListViewController
+        terminalSessionsList?.let { listView ->
+            // Set up click listeners manually
+            listView.setOnItemClickListener { _, _, position, _ ->
+                val termuxSession = service.mShellManager.mTermuxSessions.getOrNull(position)
+                termuxSession?.let { session ->
+                    switchToSession(session.terminalSession.mHandle)
+                    drawerLayout?.closeDrawers()
+                }
             }
             
-            // Setup session context menu
-            controller.setOnSessionContextMenuListener { termuxSession, menuInfo ->
-                // Handle context menu for session management
-                showSessionContextMenu(termuxSession)
+            listView.setOnItemLongClickListener { _, _, position, _ ->
+                val termuxSession = service.mShellManager.mTermuxSessions.getOrNull(position)
+                termuxSession?.let { session ->
+                    showSessionContextMenu(session)
+                }
+                true
             }
-            
-            // Initialize with current sessions
-            controller.notifyDataSetChanged()
         }
     }
     
@@ -151,14 +150,13 @@ class TermuxTabbedActivity : AppCompatActivity(), ServiceConnection {
             lifecycleScope.launch {
                 try {
                     // Create new terminal session through service
-                    val termuxSession = service.createNewSession(null, null, null, false)
+                    val termuxSession = service.createTermuxSession(null, null, null)
                     
                     if (termuxSession != null) {
                         initializeSessionTabs(termuxSession)
-                        switchToSession(termuxSession.mHandle)
+                        switchToSession(termuxSession.terminalSession.mHandle)
                         
-                        // Update sessions list
-                        sessionsListController?.notifyDataSetChanged()
+                        // Update sessions list - would need to refresh ListView manually
                     }
                 } catch (e: Exception) {
                     // Handle session creation error
@@ -168,9 +166,9 @@ class TermuxTabbedActivity : AppCompatActivity(), ServiceConnection {
         }
     }
     
-    private fun initializeSessionTabs(termuxSession: TermuxSession) {
+    private fun initializeSessionTabs(termuxSession: com.termux.shared.termux.shell.command.runner.terminal.TermuxSession) {
         sessionTabManager.initializeSession(
-            sessionHandle = termuxSession.mHandle,
+            sessionHandle = termuxSession.terminalSession.mHandle,
             termuxSession = termuxSession,
             context = this
         )
@@ -183,8 +181,7 @@ class TermuxTabbedActivity : AppCompatActivity(), ServiceConnection {
         // Setup tabs for this session
         setupSessionTabs(sessionHandle)
         
-        // Update sessions list selection
-        sessionsListController?.setSelectedSession(sessionHandle)
+        // Update sessions list selection - would need manual implementation
     }
     
     private fun setupSessionTabs(sessionHandle: String) {
@@ -248,10 +245,10 @@ class TermuxTabbedActivity : AppCompatActivity(), ServiceConnection {
         return Fragment()
     }
     
-    private fun showSessionContextMenu(termuxSession: TermuxSession) {
+    private fun showSessionContextMenu(termuxSession: com.termux.shared.termux.shell.command.runner.terminal.TermuxSession) {
         // TODO: Implement session context menu
         // - Rename session
-        // - Kill session
+        // - Kill session  
         // - Duplicate session
     }
     
