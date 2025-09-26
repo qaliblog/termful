@@ -166,7 +166,7 @@ class TermuxTabbedActivity : AppCompatActivity(), ServiceConnection {
         }
     }
     
-    private fun initializeSessionTabs(termuxSession: com.termux.shared.termux.shell.command.runner.terminal.TermuxSession) {
+    private fun initializeSessionTabs(termuxSession: com.termful.shared.termux.shell.command.runner.terminal.TermuxSession) {
         sessionTabManager.initializeSession(
             sessionHandle = termuxSession.terminalSession.mHandle,
             termuxSession = termuxSession,
@@ -245,7 +245,7 @@ class TermuxTabbedActivity : AppCompatActivity(), ServiceConnection {
         return Fragment()
     }
     
-    private fun showSessionContextMenu(termuxSession: com.termux.shared.termux.shell.command.runner.terminal.TermuxSession) {
+    private fun showSessionContextMenu(termuxSession: com.termful.shared.termux.shell.command.runner.terminal.TermuxSession) {
         // TODO: Implement session context menu
         // - Rename session
         // - Kill session  

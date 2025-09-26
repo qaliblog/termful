@@ -135,7 +135,7 @@ class TerminalTabFragment : Fragment() {
         }
     }
     
-    private suspend fun getProcessInfo(termuxSession: com.termux.shared.termux.shell.command.runner.terminal.TermuxSession): Pair<String, String> {
+    private suspend fun getProcessInfo(termuxSession: com.termful.shared.termux.shell.command.runner.terminal.TermuxSession): Pair<String, String> {
         return withContext(Dispatchers.IO) {
             try {
                 // Get PID from the terminal session
