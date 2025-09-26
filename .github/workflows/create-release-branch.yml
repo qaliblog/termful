@@ -37,11 +37,24 @@ jobs:
         distribution: 'temurin'
 
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        api-level: 34
-        build-tools: 34.0.0
-        ndk-version: 22.1.7171670
+      run: |
+        # Install Android SDK manually
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        unzip -q commandlinetools-linux-11076708_latest.zip
+        mkdir -p $HOME/android-sdk/cmdline-tools
+        mv cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+        
+        # Set environment variables
+        export ANDROID_HOME=$HOME/android-sdk
+        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+        
+        # Accept licenses and install components
+        yes | sdkmanager --licenses
+        sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        sdkmanager "ndk;22.1.7171670"
 
     - name: Cache Gradle packages
       uses: actions/cache@v3
@@ -178,38 +191,46 @@ jobs:
 
     - name: Create GitHub Release (optional)
       if: inputs.include_apks == 'true'
-      uses: actions/create-release@v1
+      run: |
+        # Create release using GitHub CLI
+        RELEASE_TAG="termful-$(date +%Y%m%d-%H%M%S)"
+        RELEASE_NAME="Termful Build - ${{ steps.create-branch.outputs.branch-name }}"
+        
+        # Create release body
+        cat > release_body.md << EOF
+        # Termful - Alpine Linux Terminal App 🏔️
+        
+        **Transformed from Termux to Termful with Alpine Linux support**
+        
+        ## 📋 Build Information
+        - **Package:** com.termful  
+        - **Alpine Version:** v3.19
+        - **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+        - **Commit:** \`${{ github.sha }}\`
+        
+        ## 🏗️ Supported Architectures
+        - ARM 64-bit (aarch64)
+        - ARM 32-bit (armv7) 
+        - Intel 64-bit (x86_64)
+        - Intel 32-bit (x86)
+        
+        ## 📦 Package Manager
+        - **Alpine APK** instead of Debian APT
+        - Lightweight and security-focused
+        - All original terminal functionality preserved
+        
+        ## 🔗 Branch
+        Code and build artifacts available in branch: \`${{ steps.create-branch.outputs.branch-name }}\`
+        EOF
+        
+        # Create the release
+        gh release create "${RELEASE_TAG}" \
+          --title "${RELEASE_NAME}" \
+          --notes-file release_body.md \
+          --prerelease \
+          releases/apk/*/*.apk 2>/dev/null || echo "Release creation skipped"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: "termful-${{ steps.create-branch.outputs.branch-name }}"
-        release_name: "Termful Build - ${{ steps.create-branch.outputs.branch-name }}"
-        body: |
-          # Termful - Alpine Linux Terminal App 🏔️
-          
-          **Transformed from Termux to Termful with Alpine Linux support**
-          
-          ## 📋 Build Information
-          - **Package:** com.termful  
-          - **Alpine Version:** v3.19
-          - **Build Date:** ${{ steps.date.outputs.date }}
-          - **Commit:** `${{ github.sha }}`
-          
-          ## 🏗️ Supported Architectures
-          - ARM 64-bit (aarch64)
-          - ARM 32-bit (armv7) 
-          - Intel 64-bit (x86_64)
-          - Intel 32-bit (x86)
-          
-          ## 📦 Package Manager
-          - **Alpine APK** instead of Debian APT
-          - Lightweight and security-focused
-          - All original terminal functionality preserved
-          
-          ## 🔗 Branch
-          Code and build artifacts available in branch: `${{ steps.create-branch.outputs.branch-name }}`
-        draft: false
-        prerelease: true
 
   notify:
     runs-on: ubuntu-latest

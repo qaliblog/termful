@@ -1,0 +1,108 @@
+name: Simple Termful Build
+
+on:
+  workflow_dispatch:  # Manual trigger only
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'app/**'
+      - 'termful-shared/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Install Android SDK
+      run: |
+        # Download and setup Android SDK
+        cd $HOME
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        unzip -q commandlinetools-linux-11076708_latest.zip
+        mkdir -p android-sdk/cmdline-tools
+        mv cmdline-tools android-sdk/cmdline-tools/latest
+        
+        # Set environment
+        export ANDROID_HOME=$HOME/android-sdk
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+        
+        # Install SDK components
+        cd $ANDROID_HOME
+        yes | cmdline-tools/latest/bin/sdkmanager --licenses
+        cmdline-tools/latest/bin/sdkmanager "platform-tools"
+        cmdline-tools/latest/bin/sdkmanager "platforms;android-34"  
+        cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
+        cmdline-tools/latest/bin/sdkmanager "ndk;22.1.7171670"
+
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    - name: Clean project
+      run: ./gradlew clean
+
+    - name: Download Alpine rootfs
+      run: ./gradlew downloadBootstraps --info
+
+    - name: Build debug APK
+      run: ./gradlew assembleDebug --stacktrace
+
+    - name: Build release APK (unsigned)
+      run: ./gradlew assembleRelease --stacktrace
+
+    - name: Collect build artifacts
+      run: |
+        mkdir -p build-output
+        find app/build/outputs/apk -name "*.apk" -exec cp {} build-output/ \;
+        
+        echo "## Build Summary" > build-output/BUILD_SUMMARY.md
+        echo "- **Date:** $(date)" >> build-output/BUILD_SUMMARY.md
+        echo "- **Commit:** ${{ github.sha }}" >> build-output/BUILD_SUMMARY.md
+        echo "- **Branch:** ${{ github.ref_name }}" >> build-output/BUILD_SUMMARY.md
+        echo "- **Alpine Version:** v3.19" >> build-output/BUILD_SUMMARY.md
+        echo "" >> build-output/BUILD_SUMMARY.md
+        echo "### APK Files:" >> build-output/BUILD_SUMMARY.md
+        ls -la build-output/*.apk >> build-output/BUILD_SUMMARY.md 2>/dev/null || echo "No APK files found" >> build-output/BUILD_SUMMARY.md
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: termful-apks
+        path: build-output/
+        retention-days: 30
+
+    - name: Update termful branch
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      run: |
+        # Configure git
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Check if termful branch exists
+        git fetch origin
+        if git show-ref --verify --quiet refs/remotes/origin/termful; then
+          git checkout termful
+          git merge origin/${{ github.ref_name }} --no-edit -m "Auto-merge from ${{ github.ref_name }} - $(date)"
+        else
+          git checkout -b termful
+          git commit --allow-empty -m "Initial termful branch - $(date)"
+        fi
+        
+        # Update branch info
+        echo "Last updated: $(date)" > LAST_BUILD.txt
+        echo "Commit: ${{ github.sha }}" >> LAST_BUILD.txt
+        echo "Workflow: ${{ github.run_id }}" >> LAST_BUILD.txt
+        
+        git add LAST_BUILD.txt
+        git commit -m "Update build info - $(date)" || echo "No changes"
+        git push origin termful
