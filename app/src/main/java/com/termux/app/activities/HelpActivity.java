@@ -36,12 +36,12 @@ public final class HelpActivity extends AppCompatActivity {
         WebSettings settings = mWebView.getSettings();
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         // setAppCacheEnabled() is deprecated and removed in newer API levels
-        if (android.os.Build.VERSION.SDK_INT < 33) {
-            try {
-                settings.setAppCacheEnabled(false);
-            } catch (Exception e) {
-                // Ignore - method may not exist on newer APIs
-            }
+        // Use reflection to call the method if it exists
+        try {
+            java.lang.reflect.Method method = settings.getClass().getMethod("setAppCacheEnabled", boolean.class);
+            method.invoke(settings, false);
+        } catch (Exception e) {
+            // Method doesn't exist or failed - ignore, it's deprecated anyway
         }
         setContentView(progressLayout);
         mWebView.clearCache(true);
