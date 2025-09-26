@@ -24,8 +24,9 @@ jobs:
 
     - name: Setup Android SDK
       run: |
-        # Clear conflicting environment variables
+        # Aggressively clear conflicting environment variables
         unset ANDROID_SDK_ROOT
+        export ANDROID_SDK_ROOT=""
         echo "ANDROID_SDK_ROOT=" >> $GITHUB_ENV
         
         # Use existing Android SDK if available, otherwise install manually
@@ -35,6 +36,9 @@ jobs:
           echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
           echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
           echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          
+          # Create local.properties to override any conflicting settings
+          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
           
           # Install missing components if needed
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
@@ -52,6 +56,9 @@ jobs:
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
           
+          # Create local.properties to override any conflicting settings
+          echo "sdk.dir=$HOME/android-sdk" > local.properties
+          
           # Install SDK components
           yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
           $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;22.1.7171670"
@@ -59,6 +66,15 @@ jobs:
 
     - name: Make gradlew executable
       run: chmod +x gradlew
+
+    - name: Debug environment before build
+      run: |
+        echo "=== Environment Check ==="
+        echo "ANDROID_HOME: '$ANDROID_HOME'"
+        echo "ANDROID_SDK_ROOT: '$ANDROID_SDK_ROOT'"
+        echo "Contents of local.properties:"
+        cat local.properties 2>/dev/null || echo "No local.properties file"
+        echo "Working directory: $(pwd)"
 
     - name: Clean project
       run: ./gradlew clean
