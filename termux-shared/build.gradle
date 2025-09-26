@@ -62,6 +62,12 @@ android {
             path file('src/main/cpp/Android.mk')
         }
     }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 dependencies {
@@ -81,7 +87,7 @@ afterEvaluate {
         publications {
             // Creates a Maven publication called "release".
             release(MavenPublication) {
-                from components.default
+                from components.release
                 groupId = 'com.termux'
                 artifactId = 'termux-shared'
                 version = '0.118.0'

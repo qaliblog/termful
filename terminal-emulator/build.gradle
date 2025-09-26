@@ -42,6 +42,12 @@ android {
     testOptions {
         unitTests.returnDefaultValues = true
     }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
 }
 
 tasks.withType(Test) {
@@ -60,16 +66,16 @@ task sourceJar(type: Jar) {
     archiveClassifier = "sources"
 }
 
+
 afterEvaluate {
     publishing {
         publications {
             // Creates a Maven publication called "release".
             release(MavenPublication) {
-                from components.default
+                from components.release
                 groupId = 'com.termux'
                 artifactId = 'terminal-emulator'
                 version = '0.118.0'
-                artifact(sourceJar)
             }
         }
     }
