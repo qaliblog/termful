@@ -134,13 +134,17 @@
         android:layout_weight="1">
 
         <!-- Code Editor -->
-        <com.amrdeveloper.codeview.CodeView
+        <EditText
             android:id="@+id/code_editor"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="top|start"
             android:inputType="textMultiLine|textNoSuggestions"
-            android:scrollbars="vertical|horizontal" />
+            android:scrollbars="vertical|horizontal"
+            android:fontFamily="monospace"
+            android:textSize="14sp"
+            android:background="@android:color/white"
+            android:padding="8dp" />
 
         <!-- No file open state -->
         <LinearLayout

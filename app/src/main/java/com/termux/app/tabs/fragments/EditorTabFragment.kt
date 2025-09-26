@@ -16,7 +16,7 @@ import com.google.android.material.card.MaterialCardView
 import com.termux.R
 import com.termux.app.tabs.EditorTabData
 import com.termux.app.tabs.SessionTabManager
-import com.amrdeveloper.codeview.CodeView
+// import com.amrdeveloper.codeview.CodeView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -43,7 +43,7 @@ class EditorTabFragment : Fragment() {
     private var cursorPositionText: TextView? = null
     private var fileEncodingText: TextView? = null
     private var languageText: TextView? = null
-    private var codeEditor: CodeView? = null
+    private var codeEditor: EditText? = null
     private var noFileState: LinearLayout? = null
     private var externalChangeNotification: MaterialCardView? = null
     private var reloadFileButton: MaterialButton? = null
@@ -204,7 +204,6 @@ class EditorTabFragment : Fragment() {
                 if (content != null) {
                     showEditor()
                     codeEditor?.setText(content)
-                    setupSyntaxHighlighting(filePath)
                     updateFileInfo(filePath)
                     updateModifiedState(false)
                     startFileWatching(filePath)
@@ -293,30 +292,9 @@ class EditorTabFragment : Fragment() {
         }
     }
     
-    private fun setupSyntaxHighlighting(filePath: String) {
-        val fileName = File(filePath).name
-        val language = detectLanguage(fileName)
-        
-        codeEditor?.apply {
-            // Configure syntax highlighting based on file extension
-            when (language) {
-                "Java" -> {
-                    // Setup Java highlighting if available
-                    // CodeView has built-in support for various languages
-                }
-                "Kotlin" -> {
-                    // Setup Kotlin highlighting
-                }
-                "JavaScript" -> {
-                    // Setup JavaScript highlighting
-                }
-                // Add more languages as needed
-            }
-        }
-    }
     
     private fun updateUndoRedoButtons() {
-        // CodeView doesn't have built-in undo/redo, so we'll implement basic functionality
+        // EditText doesn't have built-in undo/redo, so we'll implement basic functionality
         // For now, disable the buttons - this could be enhanced with a custom undo/redo system
         undoButton?.isEnabled = false
         redoButton?.isEnabled = false
