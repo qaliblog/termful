@@ -100,7 +100,11 @@ jobs:
       run: ./gradlew downloadBootstraps --info
 
     - name: Build debug APK
-      run: ./gradlew assembleDebug --stacktrace
+      run: |
+        # Build debug with memory constraints
+        ./gradlew assembleDebug --stacktrace --no-daemon --max-workers=2
+      env:
+        GRADLE_OPTS: "-Xmx2048m -Dfile.encoding=UTF-8"
 
     - name: Collect build artifacts
       run: |
