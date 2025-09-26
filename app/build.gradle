@@ -233,7 +233,8 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         def proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath, 
                    "--exclude=var/run", "--exclude=dev", "--exclude=proc", 
                    "--exclude=sys", "--exclude=run", "--exclude=**/systemd/**",
-                   "--exclude=**/udev/**", "--exclude=**/*x2f*", "--exclude=**/*x2d*"].execute()
+                   "--exclude=**/udev/**", "--exclude=**/*x2f*", "--exclude=**/*x2d*",
+                   "--exclude=etc/ssl1.1", "--exclude=**/cert.pem"].execute()
         def exitCode = proc.waitFor()
         if (exitCode != 0) {
             logger.quiet("Tar extraction with exclusions failed, trying basic extraction...")
@@ -253,7 +254,8 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             "dev",
             "proc", 
             "sys",
-            "run"
+            "run",
+            "etc/ssl1.1"  // Remove SSL 1.1 certificates (can cause symlink issues)
         ]
         
         problematicDirs.each { dirPath ->
@@ -270,7 +272,8 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dir.listFiles()?.each { fileOrDir ->
                 if (fileOrDir.name.contains("x2f") || fileOrDir.name.contains("x2d") || 
                     fileOrDir.name.contains("udev") || fileOrDir.name.contains("systemd") ||
-                    fileOrDir.absolutePath.contains("/run/") || fileOrDir.absolutePath.contains("/dev/")) {
+                    fileOrDir.absolutePath.contains("/run/") || fileOrDir.absolutePath.contains("/dev/") ||
+                    fileOrDir.name.equals("cert.pem") || fileOrDir.absolutePath.contains("/ssl1.1/")) {
                     logger.quiet("Removing problematic file/dir: " + fileOrDir.absolutePath.substring(tempDir.absolutePath.length()))
                     if (fileOrDir.isDirectory()) {
                         fileOrDir.deleteDir()
@@ -290,7 +293,9 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             "var/tmp", 
             "var/log",
             "var/cache/apk",
-            "home/root"
+            "home/root",
+            "etc/ssl",
+            "etc/ssl/certs"
         ]
         
         essentialDirs.each { dirPath ->
@@ -317,6 +322,9 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                     exclude(name: "**/*azure*")
                     exclude(name: "**/*resource*")
                     exclude(name: "**/links/**")
+                    exclude(name: "**/ssl1.1/**")
+                    exclude(name: "**/cert.pem")
+                    exclude(name: "**/ca-certificates.crt")
                 }
             }
             
