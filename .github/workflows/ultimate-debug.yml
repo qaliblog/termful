@@ -1,0 +1,121 @@
+name: Ultimate Android SDK Debug
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Initial Environment Check
+      run: |
+        echo "=== INITIAL ENVIRONMENT ==="
+        echo "ANDROID_HOME: '$ANDROID_HOME'"
+        echo "ANDROID_SDK_ROOT: '$ANDROID_SDK_ROOT'"
+        echo "ANDROID_NDK: '$ANDROID_NDK'"
+        echo "ANDROID_NDK_HOME: '$ANDROID_NDK_HOME'"
+        echo "Working directory: $(pwd)"
+        echo ""
+        
+        echo "=== ALL ANDROID ENVIRONMENT VARIABLES ==="
+        env | grep -i android || echo "No Android environment variables found"
+        echo ""
+        
+        echo "=== CHECKING GRADLE PROPERTIES ==="
+        find . -name "gradle.properties" -exec echo "File: {}" \; -exec cat {} \; 2>/dev/null || echo "No gradle.properties files"
+        echo ""
+        
+        echo "=== CHECKING LOCAL PROPERTIES ==="
+        find . -name "local.properties" -exec echo "File: {}" \; -exec cat {} \; 2>/dev/null || echo "No local.properties files"
+        echo ""
+        
+        echo "=== SYSTEM ANDROID SDK PATHS ==="
+        ls -la /usr/local/lib/android/ 2>/dev/null || echo "No /usr/local/lib/android/"
+        ls -la /opt/android/ 2>/dev/null || echo "No /opt/android/"
+        ls -la $HOME/android* 2>/dev/null || echo "No android directories in HOME"
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Environment After JDK Setup
+      run: |
+        echo "=== AFTER JDK SETUP ==="
+        echo "ANDROID_HOME: '$ANDROID_HOME'"
+        echo "ANDROID_SDK_ROOT: '$ANDROID_SDK_ROOT'"
+        env | grep -i android || echo "No Android environment variables found"
+
+    - name: Aggressive SDK Setup with Debugging
+      run: |
+        echo "=== BEFORE SDK CLEARING ==="
+        echo "ANDROID_HOME: '$ANDROID_HOME'"
+        echo "ANDROID_SDK_ROOT: '$ANDROID_SDK_ROOT'"
+        
+        # Show what's setting ANDROID_SDK_ROOT
+        echo "=== CHECKING WHAT SETS ANDROID_SDK_ROOT ==="
+        set | grep -i android || echo "No android variables in set"
+        
+        # Aggressively clear all Android environment variables
+        unset ANDROID_SDK_ROOT
+        unset ANDROID_NDK
+        unset ANDROID_NDK_HOME
+        export ANDROID_SDK_ROOT=""
+        export ANDROID_NDK=""
+        export ANDROID_NDK_HOME=""
+        
+        echo "=== AFTER CLEARING ==="
+        echo "ANDROID_HOME: '$ANDROID_HOME'"
+        echo "ANDROID_SDK_ROOT: '$ANDROID_SDK_ROOT'"
+        
+        # Set the correct SDK
+        export ANDROID_HOME=/usr/local/lib/android/sdk
+        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=" >> $GITHUB_ENV
+        
+        # Create local.properties
+        echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+        
+        echo "=== FINAL SETUP ==="
+        echo "ANDROID_HOME: '$ANDROID_HOME'"
+        echo "ANDROID_SDK_ROOT: '$ANDROID_SDK_ROOT'"
+        echo "Contents of local.properties:"
+        cat local.properties
+        
+        # Test if the path is correct
+        if [ -d "/usr/local/lib/android/sdk" ]; then
+          echo "✅ Android SDK directory exists"
+          ls -la /usr/local/lib/android/sdk/
+        else
+          echo "❌ Android SDK directory missing"
+        fi
+
+    - name: Test Gradle Configuration
+      run: |
+        chmod +x gradlew
+        echo "=== GRADLE ENVIRONMENT TEST ==="
+        echo "ANDROID_HOME: '$ANDROID_HOME'"
+        echo "ANDROID_SDK_ROOT: '$ANDROID_SDK_ROOT'"
+        
+        # Try to get Gradle version
+        ./gradlew --version || echo "Gradle version failed"
+        
+        # Try to check project configuration
+        echo "=== CHECKING PROJECT PROPERTIES ==="
+        ./gradlew properties | grep -i android || echo "No Android properties found"
+
+    - name: Final Environment Verification
+      run: |
+        echo "=== FINAL VERIFICATION ==="
+        echo "ANDROID_HOME: '$ANDROID_HOME'"
+        echo "ANDROID_SDK_ROOT: '$ANDROID_SDK_ROOT'"
+        echo "All environment variables:"
+        env | grep -i android || echo "No Android environment variables"
+        echo ""
+        echo "local.properties content:"
+        cat local.properties 2>/dev/null || echo "No local.properties"
