@@ -1,0 +1,231 @@
+name: Create Termful Release Branch
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      branch_name:
+        description: 'Release branch name (leave empty for auto-generated)'
+        required: false
+        default: ''
+      include_apks:
+        description: 'Include APK files in the branch'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    outputs:
+      branch-name: ${{ steps.create-branch.outputs.branch-name }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        api-level: 34
+        build-tools: 34.0.0
+        ndk-version: 22.1.7171670
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+    - name: Cache Alpine rootfs
+      uses: actions/cache@v3
+      with:
+        path: |
+          app/src/main/cpp/alpine-minirootfs-*.tar.gz
+        key: alpine-rootfs-v3.19
+
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    - name: Clean previous builds
+      run: ./gradlew clean
+
+    - name: Download Alpine Linux rootfs
+      run: ./gradlew downloadBootstraps --info
+
+    - name: Build debug APK
+      run: ./gradlew assembleDebug --stacktrace
+
+    - name: Build release APK
+      run: ./gradlew assembleRelease --stacktrace
+
+    - name: Create build metadata
+      run: |
+        mkdir -p releases/metadata
+        
+        echo "# Termful Build Information" > releases/metadata/BUILD_INFO.md
+        echo "" >> releases/metadata/BUILD_INFO.md
+        echo "**Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> releases/metadata/BUILD_INFO.md
+        echo "**Commit SHA:** \`${{ github.sha }}\`" >> releases/metadata/BUILD_INFO.md
+        echo "**Branch:** \`${{ github.ref_name }}\`" >> releases/metadata/BUILD_INFO.md
+        echo "**Triggered by:** ${{ github.actor }}" >> releases/metadata/BUILD_INFO.md
+        echo "**Workflow:** ${{ github.workflow }}" >> releases/metadata/BUILD_INFO.md
+        echo "" >> releases/metadata/BUILD_INFO.md
+        echo "## Configuration" >> releases/metadata/BUILD_INFO.md
+        echo "- **App Package:** com.termful" >> releases/metadata/BUILD_INFO.md
+        echo "- **Alpine Version:** v3.19" >> releases/metadata/BUILD_INFO.md  
+        echo "- **Package Variant:** apk-android-7" >> releases/metadata/BUILD_INFO.md
+        echo "- **Supported Architectures:** aarch64, armv7, x86, x86_64" >> releases/metadata/BUILD_INFO.md
+        echo "" >> releases/metadata/BUILD_INFO.md
+        echo "## Build Artifacts" >> releases/metadata/BUILD_INFO.md
+        echo "- Debug APK: \`$(basename app/build/outputs/apk/debug/*.apk | head -1)\`" >> releases/metadata/BUILD_INFO.md
+        echo "- Release APK: \`$(basename app/build/outputs/apk/release/*.apk | head -1)\`" >> releases/metadata/BUILD_INFO.md
+        
+        # Create a simple build info JSON
+        cat > releases/metadata/build.json << EOF
+        {
+          "app_name": "Termful", 
+          "package_name": "com.termful",
+          "build_date": "$(date -u -Iseconds)",
+          "commit_sha": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "alpine_version": "v3.19",
+          "package_variant": "apk-android-7",
+          "architectures": ["aarch64", "armv7", "x86", "x86_64"],
+          "workflow_run_id": "${{ github.run_id }}"
+        }
+        EOF
+
+    - name: Copy APKs if requested
+      if: inputs.include_apks == 'true'
+      run: |
+        mkdir -p releases/apk/debug releases/apk/release
+        cp app/build/outputs/apk/debug/*.apk releases/apk/debug/ 2>/dev/null || true
+        cp app/build/outputs/apk/release/*.apk releases/apk/release/ 2>/dev/null || true
+        
+        # Create checksums
+        if [ -f releases/apk/debug/*.apk ]; then
+          cd releases/apk/debug && sha256sum *.apk > checksums.txt && cd -
+        fi
+        if [ -f releases/apk/release/*.apk ]; then
+          cd releases/apk/release && sha256sum *.apk > checksums.txt && cd -
+        fi
+
+    - name: Create and push release branch
+      id: create-branch
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Configure git
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        # Determine branch name
+        if [ -n "${{ inputs.branch_name }}" ]; then
+          BRANCH_NAME="${{ inputs.branch_name }}"
+        else
+          TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          BRANCH_NAME="releases/termful-${TIMESTAMP}-${SHORT_SHA}"
+        fi
+        
+        echo "Creating branch: ${BRANCH_NAME}"
+        
+        # Create and switch to new branch
+        git checkout -b "${BRANCH_NAME}"
+        
+        # Add the releases directory
+        git add releases/
+        
+        # Commit changes
+        COMMIT_MSG="🚀 Termful Release Build
+
+        📱 **App:** Termful (com.termful)  
+        🏔️ **OS:** Alpine Linux v3.19
+        📦 **Variant:** apk-android-7
+        🏗️ **Architectures:** aarch64, armv7, x86, x86_64
+        
+        **Build Details:**
+        - Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+        - Commit: ${{ github.sha }}
+        - Branch: ${{ github.ref_name }}
+        - Workflow: ${{ github.run_id }}
+        - Include APKs: ${{ inputs.include_apks }}
+        
+        Generated by GitHub Actions 🤖"
+        
+        git commit -m "${COMMIT_MSG}"
+        
+        # Push the new branch
+        git push origin "${BRANCH_NAME}"
+        
+        echo "branch-name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+        echo "✅ Successfully created and pushed branch: ${BRANCH_NAME}"
+
+    - name: Create GitHub Release (optional)
+      if: inputs.include_apks == 'true'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: "termful-${{ steps.create-branch.outputs.branch-name }}"
+        release_name: "Termful Build - ${{ steps.create-branch.outputs.branch-name }}"
+        body: |
+          # Termful - Alpine Linux Terminal App 🏔️
+          
+          **Transformed from Termux to Termful with Alpine Linux support**
+          
+          ## 📋 Build Information
+          - **Package:** com.termful  
+          - **Alpine Version:** v3.19
+          - **Build Date:** ${{ steps.date.outputs.date }}
+          - **Commit:** `${{ github.sha }}`
+          
+          ## 🏗️ Supported Architectures
+          - ARM 64-bit (aarch64)
+          - ARM 32-bit (armv7) 
+          - Intel 64-bit (x86_64)
+          - Intel 32-bit (x86)
+          
+          ## 📦 Package Manager
+          - **Alpine APK** instead of Debian APT
+          - Lightweight and security-focused
+          - All original terminal functionality preserved
+          
+          ## 🔗 Branch
+          Code and build artifacts available in branch: `${{ steps.create-branch.outputs.branch-name }}`
+        draft: false
+        prerelease: true
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: create-release
+    if: always()
+    
+    steps:
+    - name: Build Summary
+      run: |
+        echo "## 🎉 Termful Release Branch Created!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch Name:** \`${{ needs.create-release.outputs.branch-name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Include APKs:** ${{ inputs.include_apks }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+        echo "- [View Branch](https://github.com/${{ github.repository }}/tree/${{ needs.create-release.outputs.branch-name }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Compare with Main](https://github.com/${{ github.repository }}/compare/main...${{ needs.create-release.outputs.branch-name }})" >> $GITHUB_STEP_SUMMARY
+        echo "- [Download Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY

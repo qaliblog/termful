@@ -1,0 +1,156 @@
+name: Auto Push to Termful Branch
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'app/**'
+      - 'termful-shared/**'
+      - 'terminal-emulator/**'
+      - 'terminal-view/**'
+      - '*.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/**'
+
+jobs:
+  push-to-termful:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+
+    - name: Create or update termful branch
+      run: |
+        # Check if termful branch exists remotely
+        if git ls-remote --heads origin termful | grep -q termful; then
+          echo "Branch 'termful' exists, checking it out..."
+          git fetch origin termful
+          git checkout termful
+          
+          # Merge latest changes from main/master
+          git merge origin/${{ github.ref_name }} --no-edit -m "🔄 Auto-merge from ${{ github.ref_name }}
+
+          Merged commit: ${{ github.sha }}
+          Triggered by: ${{ github.event.head_commit.message }}
+          
+          Changes include Termux → Termful transformation:
+          - Package name: com.termux → com.termful  
+          - Bootstrap: APT → Alpine Linux APK
+          - All branding updated to Termful
+          
+          Auto-merged by GitHub Actions 🤖"
+        else
+          echo "Creating new 'termful' branch..."
+          git checkout -b termful
+          
+          # Add initial commit message for the new branch
+          git commit --allow-empty -m "🎉 Initial Termful branch
+
+          🏔️ **Termful - Alpine Linux Terminal App**
+          
+          Transformed from Termux with the following changes:
+          - **Package:** com.termux → com.termful
+          - **Name:** Termux → Termful  
+          - **Bootstrap:** APT packages → Alpine Linux rootfs
+          - **Package Manager:** APT → Alpine APK
+          - **Architecture Support:** Maintained (aarch64, armv7, x86, x86_64)
+          
+          **Key Features:**
+          ✅ All original Termux functionality preserved
+          ✅ Lightweight Alpine Linux environment  
+          ✅ Security-focused minimal rootfs
+          ✅ Multi-architecture support
+          ✅ Terminal emulation unchanged
+          ✅ File manager and editor intact
+          ✅ AI agent features preserved
+          
+          Based on commit: ${{ github.sha }}
+          Created by GitHub Actions 🤖"
+        fi
+
+    - name: Update branch info
+      run: |
+        # Create/update a branch info file
+        cat > TERMFUL_BRANCH_INFO.md << EOF
+        # Termful Branch Information
+        
+        This branch contains the transformed Termful app with Alpine Linux support.
+        
+        ## Latest Update
+        - **Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+        - **Source Commit:** \`${{ github.sha }}\`
+        - **Source Branch:** \`${{ github.ref_name }}\`
+        - **Trigger:** ${{ github.event_name }}
+        
+        ## Transformation Status
+        - [x] Package name changed to com.termful
+        - [x] App branding updated to Termful
+        - [x] Alpine Linux rootfs integration
+        - [x] APK package manager support
+        - [x] Architecture support maintained
+        - [x] Native code updated
+        - [x] Build system configured
+        
+        ## Build Instructions
+        \`\`\`bash
+        # Setup environment
+        ./setup_build_env.sh
+        
+        # Build the app
+        ./gradlew clean
+        ./gradlew assembleDebug
+        \`\`\`
+        
+        ## Alpine Linux Integration
+        - **Version:** v3.19 (latest stable)
+        - **Source:** Official Alpine Linux CDN
+        - **Architectures:** aarch64, armv7, x86, x86_64
+        - **Package Manager:** Alpine APK
+        
+        ---
+        *Last updated by GitHub Actions workflow*
+        EOF
+        
+        git add TERMFUL_BRANCH_INFO.md
+
+    - name: Commit and push changes
+      run: |
+        # Check if there are any changes to commit
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "📝 Update branch info - $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+        fi
+        
+        # Push the branch
+        git push origin termful
+        
+        echo "✅ Successfully updated termful branch"
+
+    - name: Create summary
+      run: |
+        echo "## 🎯 Termful Branch Updated!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Source:** \`${{ github.ref_name }}\` → **Target:** \`termful\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+        echo "- [View Termful Branch](https://github.com/${{ github.repository }}/tree/termful)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Compare Changes](https://github.com/${{ github.repository }}/compare/${{ github.ref_name }}...termful)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Branch Info](https://github.com/${{ github.repository }}/blob/termful/TERMFUL_BRANCH_INFO.md)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🏔️ Alpine Linux Features" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Minimal security-focused environment" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ APK package manager" >> $GITHUB_STEP_SUMMARY  
+        echo "- ✅ Multi-architecture support" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ All Termux functionality preserved" >> $GITHUB_STEP_SUMMARY
