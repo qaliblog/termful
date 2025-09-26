@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!DOCTYPE resources [
-    <!ENTITY TERMUX_PACKAGE_NAME "com.termux">
-    <!ENTITY TERMUX_APP_NAME "Termux">
-    <!ENTITY TERMUX_API_APP_NAME "Termux:API">
-    <!ENTITY TERMUX_BOOT_APP_NAME "Termux:Boot">
-    <!ENTITY TERMUX_FLOAT_APP_NAME "Termux:Float">
-    <!ENTITY TERMUX_STYLING_APP_NAME "Termux:Styling">
-    <!ENTITY TERMUX_TASKER_APP_NAME "Termux:Tasker">
-    <!ENTITY TERMUX_WIDGET_APP_NAME "Termux:Widget">
+    <!ENTITY TERMUX_PACKAGE_NAME "com.termful">
+    <!ENTITY TERMUX_APP_NAME "Termful">
+    <!ENTITY TERMUX_API_APP_NAME "Termful:API">
+    <!ENTITY TERMUX_BOOT_APP_NAME "Termful:Boot">
+    <!ENTITY TERMUX_FLOAT_APP_NAME "Termful:Float">
+    <!ENTITY TERMUX_STYLING_APP_NAME "Termful:Styling">
+    <!ENTITY TERMUX_TASKER_APP_NAME "Termful:Tasker">
+    <!ENTITY TERMUX_WIDGET_APP_NAME "Termful:Widget">
     ]>
 
 <resources>
@@ -166,7 +166,7 @@
 
     <string name="action_report_issue">Report Issue</string>
     <string name="msg_generating_report">Generating Report</string>
-    <string name="msg_add_termux_debug_info">Add termux debug info to report?</string>
+    <string name="msg_add_termux_debug_info">Add termful debug info to report?</string>
 
     <string name="error_styling_not_installed">The &TERMUX_STYLING_APP_NAME; Plugin App is not installed.</string>
     <string name="action_styling_install">Install</string>
