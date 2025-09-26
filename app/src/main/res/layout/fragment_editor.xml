@@ -134,10 +134,13 @@
         android:layout_weight="1">
 
         <!-- Code Editor -->
-        <io.github.rosemoe.sora.widget.CodeEditor
+        <com.amrdeveloper.codeview.CodeView
             android:id="@+id/code_editor"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:gravity="top|start"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:scrollbars="vertical|horizontal" />
 
         <!-- No file open state -->
         <LinearLayout

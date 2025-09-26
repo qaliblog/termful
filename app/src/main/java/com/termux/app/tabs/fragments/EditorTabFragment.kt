@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.widget.Toast
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +16,7 @@ import com.google.android.material.card.MaterialCardView
 import com.termux.R
 import com.termux.app.tabs.EditorTabData
 import com.termux.app.tabs.SessionTabManager
-import io.github.rosemoe.sora.widget.CodeEditor
+import com.amrdeveloper.codeview.CodeView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,7 +43,7 @@ class EditorTabFragment : Fragment() {
     private var cursorPositionText: TextView? = null
     private var fileEncodingText: TextView? = null
     private var languageText: TextView? = null
-    private var codeEditor: CodeEditor? = null
+    private var codeEditor: CodeView? = null
     private var noFileState: LinearLayout? = null
     private var externalChangeNotification: MaterialCardView? = null
     private var reloadFileButton: MaterialButton? = null
@@ -136,21 +137,20 @@ class EditorTabFragment : Fragment() {
         // Setup code editor
         codeEditor?.apply {
             // Configure editor settings
-            isEditable = true
-            setTextSize(14f)
+            textSize = 14f
             
             // Add text change listener
-            subscribeEvent { event ->
-                when (event) {
-                    is io.github.rosemoe.sora.event.ContentChangeEvent -> {
-                        updateModifiedState(true)
-                        updateUndoRedoButtons()
-                    }
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    updateModifiedState(true)
+                    updateUndoRedoButtons()
                 }
-            }
+            })
             
-            // Add cursor position listener
-            // TODO: Implement cursor position tracking
+            // Setup syntax highlighting based on file type
+            // This will be configured when a file is opened
         }
         
         // Setup find text watcher
@@ -204,6 +204,7 @@ class EditorTabFragment : Fragment() {
                 if (content != null) {
                     showEditor()
                     codeEditor?.setText(content)
+                    setupSyntaxHighlighting(filePath)
                     updateFileInfo(filePath)
                     updateModifiedState(false)
                     startFileWatching(filePath)
@@ -292,11 +293,33 @@ class EditorTabFragment : Fragment() {
         }
     }
     
-    private fun updateUndoRedoButtons() {
-        codeEditor?.let { editor ->
-            undoButton?.isEnabled = editor.canUndo()
-            redoButton?.isEnabled = editor.canRedo()
+    private fun setupSyntaxHighlighting(filePath: String) {
+        val fileName = File(filePath).name
+        val language = detectLanguage(fileName)
+        
+        codeEditor?.apply {
+            // Configure syntax highlighting based on file extension
+            when (language) {
+                "Java" -> {
+                    // Setup Java highlighting if available
+                    // CodeView has built-in support for various languages
+                }
+                "Kotlin" -> {
+                    // Setup Kotlin highlighting
+                }
+                "JavaScript" -> {
+                    // Setup JavaScript highlighting
+                }
+                // Add more languages as needed
+            }
         }
+    }
+    
+    private fun updateUndoRedoButtons() {
+        // CodeView doesn't have built-in undo/redo, so we'll implement basic functionality
+        // For now, disable the buttons - this could be enhanced with a custom undo/redo system
+        undoButton?.isEnabled = false
+        redoButton?.isEnabled = false
     }
     
     private fun startFileWatching(filePath: String) {
@@ -378,13 +401,13 @@ class EditorTabFragment : Fragment() {
     }
     
     private fun undo() {
-        codeEditor?.undo()
-        updateUndoRedoButtons()
+        // Basic undo functionality - could be enhanced with custom undo stack
+        Toast.makeText(requireContext(), "Undo functionality coming soon", Toast.LENGTH_SHORT).show()
     }
     
     private fun redo() {
-        codeEditor?.redo()
-        updateUndoRedoButtons()
+        // Basic redo functionality - could be enhanced with custom redo stack
+        Toast.makeText(requireContext(), "Redo functionality coming soon", Toast.LENGTH_SHORT).show()
     }
     
     private fun showEditorMenu() {
@@ -422,19 +445,49 @@ class EditorTabFragment : Fragment() {
     
     private fun performFind(query: String) {
         if (query.isNotEmpty()) {
-            // TODO: Implement find functionality with CodeEditor
-            codeEditor?.searcher?.search(query)
+            // Basic find functionality - highlight matching text
+            val text = codeEditor?.text?.toString() ?: ""
+            val index = text.indexOf(query, ignoreCase = true)
+            if (index >= 0) {
+                codeEditor?.setSelection(index, index + query.length)
+            }
         }
     }
     
     private fun findNext() {
-        // TODO: Implement find next
-        codeEditor?.searcher?.gotoNext()
+        val query = findEditText?.text?.toString() ?: ""
+        if (query.isNotEmpty()) {
+            val text = codeEditor?.text?.toString() ?: ""
+            val currentSelection = codeEditor?.selectionEnd ?: 0
+            val index = text.indexOf(query, currentSelection, ignoreCase = true)
+            if (index >= 0) {
+                codeEditor?.setSelection(index, index + query.length)
+            } else {
+                // Wrap around to beginning
+                val wrapIndex = text.indexOf(query, 0, ignoreCase = true)
+                if (wrapIndex >= 0) {
+                    codeEditor?.setSelection(wrapIndex, wrapIndex + query.length)
+                }
+            }
+        }
     }
     
     private fun findPrevious() {
-        // TODO: Implement find previous  
-        codeEditor?.searcher?.gotoPrevious()
+        val query = findEditText?.text?.toString() ?: ""
+        if (query.isNotEmpty()) {
+            val text = codeEditor?.text?.toString() ?: ""
+            val currentSelection = codeEditor?.selectionStart ?: 0
+            val index = text.lastIndexOf(query, currentSelection - 1, ignoreCase = true)
+            if (index >= 0) {
+                codeEditor?.setSelection(index, index + query.length)
+            } else {
+                // Wrap around to end
+                val wrapIndex = text.lastIndexOf(query, ignoreCase = true)
+                if (wrapIndex >= 0) {
+                    codeEditor?.setSelection(wrapIndex, wrapIndex + query.length)
+                }
+            }
+        }
     }
     
     private fun replaceNext() {
@@ -469,8 +522,16 @@ class EditorTabFragment : Fragment() {
     }
     
     private fun goToLine(lineNumber: Int) {
-        // TODO: Implement go to line functionality
-        codeEditor?.setSelection(lineNumber - 1, 0)
+        val text = codeEditor?.text?.toString() ?: ""
+        val lines = text.split('\n')
+        
+        if (lineNumber > 0 && lineNumber <= lines.size) {
+            var charPosition = 0
+            for (i in 0 until lineNumber - 1) {
+                charPosition += lines[i].length + 1 // +1 for newline
+            }
+            codeEditor?.setSelection(charPosition)
+        }
     }
     
     private fun showFileInfo() {
@@ -487,7 +548,7 @@ class EditorTabFragment : Fragment() {
                 appendLine("Modified: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date(file.lastModified()))}")
                 appendLine("Encoding: ${editorData.encoding}")
                 appendLine("Language: ${editorData.language}")
-                appendLine("Lines: ${codeEditor?.text?.lines()?.size ?: 0}")
+                appendLine("Lines: ${codeEditor?.text?.toString()?.lines()?.size ?: 0}")
             }
             
             AlertDialog.Builder(requireContext())
