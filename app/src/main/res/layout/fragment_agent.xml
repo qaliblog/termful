@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/colorSurface">
+
+    <!-- Agent Toolbar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/ai_agent"
+            android:textColor="?attr/colorOnPrimary"
+            android:textStyle="bold"
+            android:textSize="18sp" />
+
+        <!-- Agent status indicator -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginEnd="16dp">
+
+            <View
+                android:id="@+id/agent_status_indicator"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/circle_shape"
+                android:backgroundTint="@color/status_inactive" />
+
+            <TextView
+                android:id="@+id/agent_status_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/status_inactive"
+                android:textColor="?attr/colorOnPrimary"
+                android:textSize="12sp"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
+
+        <!-- Working directory selector -->
+        <ImageButton
+            android:id="@+id/working_dir_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_folder_open"
+            android:contentDescription="@string/action_select_working_dir"
+            app:tint="?attr/colorOnPrimary" />
+
+        <!-- History button -->
+        <ImageButton
+            android:id="@+id/history_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_history"
+            android:contentDescription="@string/action_open_history"
+            app:tint="?attr/colorOnPrimary" />
+
+        <!-- Settings button -->
+        <ImageButton
+            android:id="@+id/agent_settings_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_settings"
+            android:contentDescription="@string/action_agent_settings"
+            app:tint="?attr/colorOnPrimary" />
+
+    </LinearLayout>
+
+    <!-- Agent process info bar -->
+    <LinearLayout
+        android:id="@+id/agent_process_info"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:orientation="horizontal"
+        android:background="?attr/colorSurfaceVariant"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/agent_process_pid_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Agent PID: -"
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <TextView
+            android:id="@+id/agent_working_dir_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:text="Working Dir: ~"
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:maxLines="1"
+            android:ellipsize="start" />
+
+        <ImageButton
+            android:id="@+id/terminate_agent_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_stop"
+            android:contentDescription="@string/action_terminate_agent"
+            app:tint="@color/error" />
+
+    </LinearLayout>
+
+    <!-- Main content area -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- Agent console output -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Console area -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/agent_console_recycler"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingVertical="8dp"
+                android:scrollbars="vertical" />
+
+            <!-- Input area -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="?attr/colorSurfaceVariant"
+                android:elevation="4dp"
+                android:padding="12dp">
+
+                <!-- Quick commands (optional) -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/quick_commands_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:visibility="gone"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Input row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="bottom">
+
+                    <EditText
+                        android:id="@+id/agent_input_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="@string/hint_ask_agent"
+                        android:background="@drawable/edit_text_background"
+                        android:padding="12dp"
+                        android:maxLines="6"
+                        android:scrollHorizontally="false"
+                        android:inputType="textMultiLine|textCapSentences" />
+
+                    <ImageButton
+                        android:id="@+id/send_button"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/circle_background"
+                        android:backgroundTint="?attr/colorPrimary"
+                        android:src="@drawable/ic_send"
+                        android:contentDescription="@string/action_send"
+                        android:enabled="false"
+                        app:tint="?attr/colorOnPrimary" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Side panel for history/commands (collapsible) -->
+        <LinearLayout
+            android:id="@+id/side_panel"
+            android:layout_width="240dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="?attr/colorSurfaceVariant"
+            android:elevation="2dp"
+            android:visibility="gone">
+
+            <!-- Side panel tabs -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/side_panel_tabs"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="?attr/colorSurface"
+                app:tabTextColor="?attr/colorOnSurface"
+                app:tabSelectedTextColor="?attr/colorPrimary"
+                app:tabIndicatorColor="?attr/colorPrimary"
+                app:tabMode="fixed">
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tab_history" />
+
+                <com.google.android.material.tabs.TabItem
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tab_commands" />
+
+            </com.google.android.material.tabs.TabLayout>
+
+            <!-- Side panel content -->
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/side_panel_view_pager"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Agent inactive state -->
+    <LinearLayout
+        android:id="@+id/agent_inactive_state"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        android:padding="32dp">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_agent"
+            android:alpha="0.5"
+            app:tint="?attr/colorOnSurface" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/agent_not_configured"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/configure_agent_message"
+            android:textColor="?attr/colorOnSurface"
+            android:alpha="0.7"
+            android:gravity="center"
+            android:lineSpacingExtra="4dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/configure_agent_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/action_configure_agent"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+    </LinearLayout>
+
+</LinearLayout>

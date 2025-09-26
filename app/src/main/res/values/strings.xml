@@ -87,6 +87,83 @@
     <string name="action_open_help">Help</string>
     <string name="action_open_settings">Settings</string>
 
+    <!-- Tabs -->
+    <string name="tab_terminal">Terminal</string>
+    <string name="tab_files">Files</string>
+    <string name="tab_editor">Editor</string>
+    <string name="tab_agent">Agent</string>
+    <string name="tab_history">History</string>
+    <string name="tab_commands">Commands</string>
+
+    <!-- Terminal Tab -->
+    <string name="toggle_session_info">Toggle session info</string>
+
+    <!-- File Manager -->
+    <string name="action_go_home">Go to home directory</string>
+    <string name="action_search">Search files</string>
+    <string name="action_sort">Sort files</string>
+    <string name="action_close_search">Close search</string>
+    <string name="hint_search_files">Search files and folders…</string>
+    <string name="empty_folder">This folder is empty</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_cut">Cut</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_more">More options</string>
+    <string name="action_new_file_folder">New file or folder</string>
+
+    <!-- Editor -->
+    <string name="no_file_open">No file open</string>
+    <string name="open_file_from_manager">Open a file from the File Manager</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_redo">Redo</string>
+    <string name="action_save">Save</string>
+    <string name="action_editor_menu">Editor menu</string>
+    <string name="file_changed_externally">This file has been modified outside the editor</string>
+    <string name="action_reload">Reload</string>
+    <string name="hint_find">Find…</string>
+    <string name="hint_replace">Replace…</string>
+    <string name="action_find_previous">Find previous</string>
+    <string name="action_find_next">Find next</string>
+    <string name="action_close_find">Close find</string>
+    <string name="action_replace">Replace</string>
+    <string name="action_replace_all">Replace All</string>
+
+    <!-- AI Agent -->
+    <string name="ai_agent">AI Agent</string>
+    <string name="status_inactive">Inactive</string>
+    <string name="status_active">Active</string>
+    <string name="status_processing">Processing</string>
+    <string name="status_error">Error</string>
+    <string name="action_select_working_dir">Select working directory</string>
+    <string name="action_open_history">Open history</string>
+    <string name="action_agent_settings">Agent settings</string>
+    <string name="action_terminate_agent">Terminate agent process</string>
+    <string name="hint_ask_agent">Ask the AI agent…</string>
+    <string name="action_send">Send</string>
+    <string name="agent_not_configured">AI Agent Not Configured</string>
+    <string name="configure_agent_message">Configure your AI provider and API keys to start using the agent.</string>
+    <string name="action_configure_agent">Configure Agent</string>
+
+    <!-- Agent Settings -->
+    <string name="title_agent_settings">AI Agent Settings</string>
+    <string name="category_providers">Providers</string>
+    <string name="action_add_provider">Add Provider</string>
+    <string name="provider_gemini">Google Gemini</string>
+    <string name="provider_openai">OpenAI</string>
+    <string name="provider_anthropic">Anthropic Claude</string>
+    <string name="provider_custom">Custom Provider</string>
+    <string name="enable_rotation">Enable API key rotation</string>
+    <string name="rotation_mode">Rotation mode</string>
+    <string name="round_robin">Round Robin</string>
+    <string name="failover_priority">Failover Priority</string>
+    <string name="max_failures">Max consecutive failures</string>
+    <string name="backoff_delay">Backoff delay (ms)</string>
+    <string name="api_key">API Key</string>
+    <string name="action_test_key">Test Key</string>
+    <string name="action_add_key">Add Key</string>
+    <string name="key_valid">Key is valid</string>
+    <string name="key_invalid">Key is invalid</string>
+
     <string name="action_report_issue">Report Issue</string>
     <string name="msg_generating_report">Generating Report</string>
     <string name="msg_add_termux_debug_info">Add termux debug info to report?</string>

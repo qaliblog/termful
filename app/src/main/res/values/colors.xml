@@ -1,3 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="black">#FF000000</color>
+    
+    <!-- Status indicator colors -->
+    <color name="status_inactive">#FF757575</color>
+    <color name="status_active">#FF4CAF50</color>
+    <color name="status_processing">#FFFFC107</color>
+    <color name="status_error">#FFF44336</color>
+    <color name="error">#FFF44336</color>
 </resources>
