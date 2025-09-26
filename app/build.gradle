@@ -234,7 +234,8 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                    "--exclude=var/run", "--exclude=dev", "--exclude=proc", 
                    "--exclude=sys", "--exclude=run", "--exclude=**/systemd/**",
                    "--exclude=**/udev/**", "--exclude=**/*x2f*", "--exclude=**/*x2d*",
-                   "--exclude=etc/ssl1.1", "--exclude=**/cert.pem"].execute()
+                   "--exclude=etc/ssl1.1", "--exclude=**/cert.pem",
+                   "--exclude=var/spool", "--exclude=**/cron/**", "--exclude=**/crontabs"].execute()
         def exitCode = proc.waitFor()
         if (exitCode != 0) {
             logger.quiet("Tar extraction with exclusions failed, trying basic extraction...")
@@ -255,7 +256,8 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             "proc", 
             "sys",
             "run",
-            "etc/ssl1.1"  // Remove SSL 1.1 certificates (can cause symlink issues)
+            "etc/ssl1.1",  // Remove SSL 1.1 certificates (can cause symlink issues)
+            "var/spool"    // Remove spool directory (cron, mail, etc. with permission issues)
         ]
         
         problematicDirs.each { dirPath ->
@@ -273,7 +275,8 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                 if (fileOrDir.name.contains("x2f") || fileOrDir.name.contains("x2d") || 
                     fileOrDir.name.contains("udev") || fileOrDir.name.contains("systemd") ||
                     fileOrDir.absolutePath.contains("/run/") || fileOrDir.absolutePath.contains("/dev/") ||
-                    fileOrDir.name.equals("cert.pem") || fileOrDir.absolutePath.contains("/ssl1.1/")) {
+                    fileOrDir.name.equals("cert.pem") || fileOrDir.absolutePath.contains("/ssl1.1/") ||
+                    fileOrDir.name.contains("cron") || fileOrDir.absolutePath.contains("/spool/")) {
                     logger.quiet("Removing problematic file/dir: " + fileOrDir.absolutePath.substring(tempDir.absolutePath.length()))
                     if (fileOrDir.isDirectory()) {
                         fileOrDir.deleteDir()
@@ -325,6 +328,9 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                     exclude(name: "**/ssl1.1/**")
                     exclude(name: "**/cert.pem")
                     exclude(name: "**/ca-certificates.crt")
+                    exclude(name: "**/spool/**")
+                    exclude(name: "**/cron/**")
+                    exclude(name: "**/crontabs")
                 }
             }
             
