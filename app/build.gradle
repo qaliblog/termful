@@ -229,16 +229,27 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         def tempDir = new File(projectDir, "src/main/cpp/temp-" + arch)
         tempDir.mkdirs()
         
-        // Extract tar.gz with error handling
-        def proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath].execute()
+        // Extract tar.gz with exclusions to avoid problematic files
+        def proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath, 
+                   "--exclude=var/run", "--exclude=dev", "--exclude=proc", 
+                   "--exclude=sys", "--exclude=run", "--exclude=**/systemd/**",
+                   "--exclude=**/udev/**", "--exclude=**/*x2f*", "--exclude=**/*x2d*"].execute()
         def exitCode = proc.waitFor()
         if (exitCode != 0) {
-            throw new GradleException("Failed to extract Alpine rootfs: tar command returned " + exitCode)
+            logger.quiet("Tar extraction with exclusions failed, trying basic extraction...")
+            // Fallback to basic extraction if exclusions fail
+            tempDir.deleteDir()
+            tempDir.mkdirs()
+            proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath].execute()
+            exitCode = proc.waitFor()
+            if (exitCode != 0) {
+                throw new GradleException("Failed to extract Alpine rootfs: tar command returned " + exitCode)
+            }
         }
         
         // Remove problematic directories that cause zip issues
         def problematicDirs = [
-            "var/run/systemd",
+            "var/run",  // Remove entire var/run to avoid systemd and udev issues
             "dev",
             "proc", 
             "sys",
@@ -252,6 +263,26 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                 dirToRemove.deleteDir()
             }
         }
+        
+        // Also remove any files with problematic characters
+        def removeProblematicFiles
+        removeProblematicFiles = { File dir ->
+            dir.listFiles()?.each { file ->
+                if (file.name.contains("x2f") || file.name.contains("x2d") || 
+                    file.name.contains("udev") || file.name.contains("systemd") ||
+                    file.absolutePath.contains("/run/") || file.absolutePath.contains("/dev/")) {
+                    logger.quiet("Removing problematic file/dir: " + file.absolutePath.substring(tempDir.absolutePath.length()))
+                    if (file.isDirectory()) {
+                        file.deleteDir()
+                    } else {
+                        file.delete()
+                    }
+                } else if (file.isDirectory()) {
+                    removeProblematicFiles(file)
+                }
+            }
+        }
+        removeProblematicFiles(tempDir)
         
         // Create essential directories for Alpine
         def essentialDirs = [
@@ -278,8 +309,14 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                     exclude(name: "**/dev/**")
                     exclude(name: "**/proc/**") 
                     exclude(name: "**/sys/**")
+                    exclude(name: "**/run/**")
+                    exclude(name: "**/udev/**")
                     exclude(name: "**/*device*")
-                    exclude(name: "**/*run*")
+                    exclude(name: "**/*x2f*")
+                    exclude(name: "**/*x2d*")
+                    exclude(name: "**/*azure*")
+                    exclude(name: "**/*resource*")
+                    exclude(name: "**/links/**")
                 }
             }
             
