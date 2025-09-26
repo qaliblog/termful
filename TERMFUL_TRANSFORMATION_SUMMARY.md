@@ -39,7 +39,7 @@ Maintained support for all original architectures with Alpine equivalents:
 - `x86_64` → Alpine `x86_64`
 
 ### 6. Build System Updates
-- **Alpine Version**: Uses Alpine Linux v3.19 (latest stable)
+- **Alpine Version**: Uses Alpine Linux 3.20.7 (latest stable)
 - **Download Source**: Official Alpine CDN (dl-cdn.alpinelinux.org)
 - **Bootstrap Process**: Downloads Alpine minirootfs tar.gz files and repackages as zip
 - **Build Task**: `downloadBootstraps()` now handles Alpine rootfs instead of Termux packages
@@ -79,8 +79,8 @@ termux-app_*.apk → termful-app_*.apk
 ## Alpine Linux Integration
 
 ### Download URLs
-- Base URL: `https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/`
-- Architecture-specific rootfs files: `alpine-minirootfs-v3.19-{arch}.tar.gz`
+- Base URL: `https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/`
+- Architecture-specific rootfs files: `alpine-minirootfs-3.20.7-{arch}.tar.gz`
 
 ### Supported Architectures
 - `aarch64` (ARM 64-bit)
@@ -98,6 +98,7 @@ termux-app_*.apk → termful-app_*.apk
 
 ### Package Variant
 - Default variant changed from `apt-android-7` to `apk-android-7`
+- Alpine version: 3.20.7 (latest stable)
 - Supports Alpine APK package manager instead of Debian APT
 
 ### Permissions
