@@ -13,7 +13,7 @@ import com.termful.shared.termux.extrakeys.SpecialButton;
 import com.termful.terminal.TerminalSession;
 import com.termful.view.TerminalView;
 
-import static com.termux.shared.termux.extrakeys.ExtraKeysConstants.PRIMARY_KEY_CODES_FOR_STRINGS;
+import static com.termful.shared.termux.extrakeys.ExtraKeysConstants.PRIMARY_KEY_CODES_FOR_STRINGS;
 
 
 public class TerminalExtraKeys implements ExtraKeysView.IExtraKeysView {

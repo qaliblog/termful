@@ -778,13 +778,13 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
                     TermuxActivity.this, requestCode, !isPermissionCallback)) {
                     if (isPermissionCallback)
                         Logger.logInfoAndShowToast(TermuxActivity.this, LOG_TAG,
-                            getString(com.termux.shared.R.string.msg_storage_permission_granted_on_request));
+                            getString(com.termful.shared.R.string.msg_storage_permission_granted_on_request));
 
                     TermuxInstaller.setupStorageSymlinks(TermuxActivity.this);
                 } else {
                     if (isPermissionCallback)
                         Logger.logInfoAndShowToast(TermuxActivity.this, LOG_TAG,
-                            getString(com.termux.shared.R.string.msg_storage_permission_not_granted_on_request));
+                            getString(com.termful.shared.R.string.msg_storage_permission_not_granted_on_request));
                 }
             }
         }.start();

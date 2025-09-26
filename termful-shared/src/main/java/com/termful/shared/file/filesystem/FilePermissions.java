@@ -25,7 +25,7 @@
 
 package com.termful.shared.file.filesystem;
 
-import static com.termux.shared.file.filesystem.FilePermission.*;
+import static com.termful.shared.file.filesystem.FilePermission.*;
 
 import java.util.*;
 

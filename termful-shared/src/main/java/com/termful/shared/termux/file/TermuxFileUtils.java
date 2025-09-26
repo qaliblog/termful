@@ -1,6 +1,6 @@
 package com.termful.shared.termux.file;
 
-import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH;
+import static com.termful.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH;
 
 import android.content.Context;
 import android.os.Environment;
