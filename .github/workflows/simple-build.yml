@@ -81,12 +81,19 @@ jobs:
         # Clean project
         ./gradlew clean
         
-        # Free up disk space
+        # Aggressive disk space cleanup
         sudo apt-get clean
-        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+        sudo apt-get autoremove -y
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 
+        sudo rm -rf /usr/local/lib/android/sdk/sources /usr/local/lib/android/sdk/docs
+        sudo rm -rf /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup
         docker system prune -af
         
+        # Clear additional caches
+        sudo rm -rf ~/.gradle/caches ~/.cache
+        
         # Show available space
+        echo "=== Disk space after cleanup ==="
         df -h
 
     - name: Download Alpine rootfs
