@@ -267,18 +267,18 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         // Also remove any files with problematic characters
         def removeProblematicFiles
         removeProblematicFiles = { File dir ->
-            dir.listFiles()?.each { file ->
-                if (file.name.contains("x2f") || file.name.contains("x2d") || 
-                    file.name.contains("udev") || file.name.contains("systemd") ||
-                    file.absolutePath.contains("/run/") || file.absolutePath.contains("/dev/")) {
-                    logger.quiet("Removing problematic file/dir: " + file.absolutePath.substring(tempDir.absolutePath.length()))
-                    if (file.isDirectory()) {
-                        file.deleteDir()
+            dir.listFiles()?.each { fileOrDir ->
+                if (fileOrDir.name.contains("x2f") || fileOrDir.name.contains("x2d") || 
+                    fileOrDir.name.contains("udev") || fileOrDir.name.contains("systemd") ||
+                    fileOrDir.absolutePath.contains("/run/") || fileOrDir.absolutePath.contains("/dev/")) {
+                    logger.quiet("Removing problematic file/dir: " + fileOrDir.absolutePath.substring(tempDir.absolutePath.length()))
+                    if (fileOrDir.isDirectory()) {
+                        fileOrDir.deleteDir()
                     } else {
-                        file.delete()
+                        fileOrDir.delete()
                     }
-                } else if (file.isDirectory()) {
-                    removeProblematicFiles(file)
+                } else if (fileOrDir.isDirectory()) {
+                    removeProblematicFiles(fileOrDir)
                 }
             }
         }
