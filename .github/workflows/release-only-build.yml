@@ -13,12 +13,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
     - name: Free up maximum disk space
       run: |
         # Show initial disk usage
@@ -30,14 +24,16 @@ jobs:
         sudo apt-get autoremove -y
         sudo apt-get clean
         
-        # Remove large development environments
+        # Remove large development environments (but preserve Java)
         sudo rm -rf /usr/share/dotnet
         sudo rm -rf /opt/ghc
         sudo rm -rf /usr/local/share/boost
         sudo rm -rf /usr/local/share/powershell
         sudo rm -rf /usr/share/swift
         sudo rm -rf /usr/local/.ghcup
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        # Keep AGENT_TOOLSDIRECTORY for Java - only remove specific subdirs
+        sudo rm -rf /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go /opt/hostedtoolcache/node
+        sudo rm -rf /opt/hostedtoolcache/Python /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby
         
         # Remove Android SDK documentation and sources
         sudo rm -rf /usr/local/lib/android/sdk/sources
@@ -51,6 +47,21 @@ jobs:
         # Show final disk usage
         echo "=== Disk usage after cleanup ==="
         df -h
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Verify Java setup
+      run: |
+        echo "=== Java Environment ==="
+        echo "JAVA_HOME: $JAVA_HOME"
+        java -version
+        javac -version
+        which java
+        which javac
 
     - name: Setup Android SDK
       run: |

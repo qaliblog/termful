@@ -84,7 +84,10 @@ jobs:
         # Aggressive disk space cleanup
         sudo apt-get clean
         sudo apt-get autoremove -y
-        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+        # Remove non-Java toolchains only (preserve Java)
+        sudo rm -rf /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go /opt/hostedtoolcache/node
+        sudo rm -rf /opt/hostedtoolcache/Python /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby 
         sudo rm -rf /usr/local/lib/android/sdk/sources /usr/local/lib/android/sdk/docs
         sudo rm -rf /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup
         docker system prune -af
