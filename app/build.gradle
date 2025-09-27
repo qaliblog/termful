@@ -369,6 +369,12 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             
             logger.quiet("Successfully created bootstrap zip for " + arch + " (" + (file.length() / 1024 / 1024).round(2) + " MB) at: " + file.absolutePath)
             
+            // Debug: List zip contents to verify it's not empty
+            def zipTest = ["unzip", "-l", file.absolutePath].execute()
+            def zipOutput = zipTest.text
+            def fileCount = zipOutput.split('\n').findAll { it.trim().matches('\\d+.*') }.size()
+            logger.quiet("Bootstrap zip contains " + fileCount + " files for " + arch)
+            
         } catch (Exception e) {
             logger.error("Error creating zip for " + arch + ": " + e.getMessage())
             throw new GradleException("Failed to create bootstrap zip: " + e.getMessage())

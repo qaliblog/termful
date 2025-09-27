@@ -380,7 +380,14 @@ final class TermuxInstaller {
     public static byte[] loadZipBytes() {
         // Only load the shared library when necessary to save memory usage.
         System.loadLibrary("termful-bootstrap");
-        return getZip();
+        byte[] zipData = getZip();
+        if (zipData == null) {
+            throw new RuntimeException("Failed to load Alpine Linux bootstrap: native getZip() returned null. " +
+                "This usually means the bootstrap zip files were not properly embedded during build. " +
+                "Please check build logs for bootstrap zip creation errors.");
+        }
+        Logger.logInfo(LOG_TAG, "Loaded Alpine Linux bootstrap data: " + zipData.length + " bytes");
+        return zipData;
     }
 
     public static native byte[] getZip();
