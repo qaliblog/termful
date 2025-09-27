@@ -81,7 +81,11 @@ public class SystemEventReceiver extends BroadcastReceiver {
         intentFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
         intentFilter.addAction(Intent.ACTION_PACKAGE_REPLACED);
         intentFilter.addDataScheme("package");
-        context.registerReceiver(getInstance(), intentFilter);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(getInstance(), intentFilter, android.content.Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            context.registerReceiver(getInstance(), intentFilter);
+        }
     }
 
     public synchronized static void unregisterPackageUpdateEvents(@NonNull Context context) {
