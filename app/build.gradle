@@ -249,6 +249,13 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             }
         }
         
+        // Verify extraction was successful
+        if (!tempDir.exists() || tempDir.listFiles() == null || tempDir.listFiles().length == 0) {
+            throw new GradleException("Alpine rootfs extraction failed - temp directory empty: " + tempDir.absolutePath)
+        }
+        
+        logger.quiet("Alpine rootfs extracted successfully for " + arch + " (" + tempDir.listFiles().length + " files/dirs)")
+        
         // Remove problematic directories that cause zip issues
         def problematicDirs = [
             "var/run",  // Remove entire var/run to avoid systemd and udev issues
@@ -357,11 +364,17 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             }
             
             // Verify zip was created successfully
-            if (!file.exists() || file.length() == 0) {
-                throw new GradleException("Failed to create bootstrap zip for " + arch)
+            if (!file.exists()) {
+                throw new GradleException("Bootstrap zip file does not exist for " + arch + ": " + file.absolutePath)
+            }
+            if (file.length() == 0) {
+                throw new GradleException("Bootstrap zip file is empty for " + arch + ": " + file.absolutePath)
+            }
+            if (file.length() < 1024) {
+                throw new GradleException("Bootstrap zip file is too small for " + arch + " (" + file.length() + " bytes): " + file.absolutePath)
             }
             
-            logger.quiet("Successfully created bootstrap zip for " + arch + " (" + (file.length() / 1024 / 1024).round(2) + " MB)")
+            logger.quiet("Successfully created bootstrap zip for " + arch + " (" + (file.length() / 1024 / 1024).round(2) + " MB) at: " + file.absolutePath)
             
         } catch (Exception e) {
             logger.error("Error creating zip for " + arch + ": " + e.getMessage())
