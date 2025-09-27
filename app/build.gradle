@@ -256,6 +256,17 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         
         logger.quiet("Alpine rootfs extracted successfully for " + arch + " (" + tempDir.listFiles().length + " files/dirs)")
         
+        // Debug: List some key directories to verify content
+        def importantDirs = ["bin", "usr/bin", "lib", "etc"]
+        importantDirs.each { dirPath ->
+            def dir = new File(tempDir, dirPath)
+            if (dir.exists()) {
+                logger.quiet("Found important directory: " + dirPath + " with " + dir.listFiles().length + " items")
+            } else {
+                logger.quiet("Missing directory: " + dirPath)
+            }
+        }
+        
         // Remove problematic directories that cause zip issues
         def problematicDirs = [
             "var/run",  // Remove entire var/run to avoid systemd and udev issues
@@ -313,26 +324,15 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dirToCreate.mkdirs()
         }
         
-        // Create zip with filtered content - minimal Alpine for Android
+        // Create zip with filtered content - functional Alpine for Android
         try {
             def ant = new groovy.util.AntBuilder()
             ant.zip(destfile: file.absolutePath) {
                 fileset(dir: tempDir.absolutePath) {
-                    // Include only essential Alpine components
-                    include(name: "bin/**")
-                    include(name: "sbin/**") 
-                    include(name: "usr/bin/**")
-                    include(name: "usr/sbin/**")
-                    include(name: "lib/**")
-                    include(name: "usr/lib/**")
-                    include(name: "etc/passwd")
-                    include(name: "etc/group")
-                    include(name: "etc/hosts")
-                    include(name: "etc/apk/**")
-                    include(name: "var/cache/apk/**")
-                    include(name: "usr/share/apk/**")
+                    // Include all essential Alpine components
+                    include(name: "**/*")
                     
-                    // Exclude everything else to minimize size
+                    // Exclude only problematic patterns (but keep more content)
                     exclude(name: "**/systemd/**")
                     exclude(name: "**/dev/**")
                     exclude(name: "**/proc/**") 
@@ -345,21 +345,14 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                     exclude(name: "**/*azure*")
                     exclude(name: "**/*resource*")
                     exclude(name: "**/links/**")
-                    exclude(name: "**/ssl/**")
-                    exclude(name: "**/cert.pem")
-                    exclude(name: "**/ca-certificates.crt")
                     exclude(name: "**/spool/**")
                     exclude(name: "**/cron/**")
                     exclude(name: "**/crontabs")
-                    exclude(name: "**/man/**")
-                    exclude(name: "**/doc/**")
-                    exclude(name: "**/info/**")
-                    exclude(name: "**/share/man/**")
-                    exclude(name: "**/share/doc/**")
-                    exclude(name: "**/share/info/**")
-                    exclude(name: "**/locale/**")
-                    exclude(name: "**/zoneinfo/**")
-                    exclude(name: "**/terminfo/**")
+                    
+                    // Keep documentation and other files that might be needed
+                    // exclude(name: "**/man/**")    - Keep man pages
+                    // exclude(name: "**/doc/**")    - Keep docs  
+                    // exclude(name: "**/locale/**") - Keep locales
                 }
             }
             
