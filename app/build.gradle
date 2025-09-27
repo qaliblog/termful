@@ -101,11 +101,10 @@ android {
 
         splits {
             abi {
-                enable ((gradle.startParameter.taskNames.any { it.contains("Debug") } && splitAPKsForDebugBuilds == "1") ||
-                    (gradle.startParameter.taskNames.any { it.contains("Release") } && splitAPKsForReleaseBuilds == "1"))
+                enable true // Always enable split APKs to reduce size
                 reset ()
                 include 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
-                universalApk true
+                universalApk false // Disable universal APK to save space
             }
         }
     }
@@ -122,8 +121,9 @@ android {
     buildTypes {
         release {
             minifyEnabled true
-            shrinkResources false // Reproducible builds
+            shrinkResources true // Enable resource shrinking to reduce APK size
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug // Use debug signing for now
         }
 
         debug {
@@ -306,13 +306,26 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dirToCreate.mkdirs()
         }
         
-        // Create zip with filtered content
+        // Create zip with filtered content - minimal Alpine for Android
         try {
             def ant = new groovy.util.AntBuilder()
             ant.zip(destfile: file.absolutePath) {
                 fileset(dir: tempDir.absolutePath) {
-                    include(name: "**/*")
-                    // Exclude any remaining problematic patterns
+                    // Include only essential Alpine components
+                    include(name: "bin/**")
+                    include(name: "sbin/**") 
+                    include(name: "usr/bin/**")
+                    include(name: "usr/sbin/**")
+                    include(name: "lib/**")
+                    include(name: "usr/lib/**")
+                    include(name: "etc/passwd")
+                    include(name: "etc/group")
+                    include(name: "etc/hosts")
+                    include(name: "etc/apk/**")
+                    include(name: "var/cache/apk/**")
+                    include(name: "usr/share/apk/**")
+                    
+                    // Exclude everything else to minimize size
                     exclude(name: "**/systemd/**")
                     exclude(name: "**/dev/**")
                     exclude(name: "**/proc/**") 
@@ -325,12 +338,21 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                     exclude(name: "**/*azure*")
                     exclude(name: "**/*resource*")
                     exclude(name: "**/links/**")
-                    exclude(name: "**/ssl1.1/**")
+                    exclude(name: "**/ssl/**")
                     exclude(name: "**/cert.pem")
                     exclude(name: "**/ca-certificates.crt")
                     exclude(name: "**/spool/**")
                     exclude(name: "**/cron/**")
                     exclude(name: "**/crontabs")
+                    exclude(name: "**/man/**")
+                    exclude(name: "**/doc/**")
+                    exclude(name: "**/info/**")
+                    exclude(name: "**/share/man/**")
+                    exclude(name: "**/share/doc/**")
+                    exclude(name: "**/share/info/**")
+                    exclude(name: "**/locale/**")
+                    exclude(name: "**/zoneinfo/**")
+                    exclude(name: "**/terminfo/**")
                 }
             }
             
