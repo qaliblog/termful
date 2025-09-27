@@ -47,7 +47,7 @@
     </LinearLayout>
 
     <!-- Terminal View -->
-    <com.termux.view.TerminalView
+    <com.termful.view.TerminalView
         android:id="@+id/terminal_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
