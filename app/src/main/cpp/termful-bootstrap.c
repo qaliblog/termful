@@ -11,11 +11,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_termful_app_TermuxInstaller_getZip(JNIEnv 
         return NULL;
     }
     
-    // Check if blob is valid
-    if (blob == NULL) {
-        // Return null if no blob data
-        return NULL;
-    }
+    // blob is an array, so it can't be NULL, but check if blob_size indicates no data
     
     jbyteArray ret = (*env)->NewByteArray(env, blob_size);
     if (ret == NULL) {
