@@ -118,47 +118,145 @@ jobs:
         echo "=== Final disk usage ==="
         df -h
 
-    - name: Collect release artifacts
+    - name: Organize APKs by architecture
       run: |
-        mkdir -p release-output
-        find app/build/outputs/apk/release -name "*.apk" -exec cp {} release-output/ \; 2>/dev/null || echo "No release APKs found"
+        mkdir -p apk-outputs/{arm64-v8a,armeabi-v7a,x86_64,x86,universal}
         
-        # Create build info
-        echo "# Termful Release Build" > release-output/BUILD_INFO.md
-        echo "- **Date**: $(date)" >> release-output/BUILD_INFO.md
-        echo "- **Commit**: ${{ github.sha }}" >> release-output/BUILD_INFO.md
-        echo "- **Alpine Version**: 3.20.7" >> release-output/BUILD_INFO.md
-        echo "- **Package**: com.termful" >> release-output/BUILD_INFO.md
-        echo "- **Architectures**: aarch64, armv7, x86, x86_64" >> release-output/BUILD_INFO.md
+        # Find and organize APK files by architecture
+        find app/build/outputs/apk/release -name "*.apk" | while read apk; do
+          filename=$(basename "$apk")
+          echo "Processing: $filename"
+          
+          if [[ "$filename" == *"arm64-v8a"* ]]; then
+            cp "$apk" apk-outputs/arm64-v8a/
+            echo "✅ ARM64 APK: $filename"
+          elif [[ "$filename" == *"armeabi-v7a"* ]]; then
+            cp "$apk" apk-outputs/armeabi-v7a/
+            echo "✅ ARM32 APK: $filename"  
+          elif [[ "$filename" == *"x86_64"* ]]; then
+            cp "$apk" apk-outputs/x86_64/
+            echo "✅ x86_64 APK: $filename"
+          elif [[ "$filename" == *"x86"* ]] && [[ "$filename" != *"x86_64"* ]]; then
+            cp "$apk" apk-outputs/x86/
+            echo "✅ x86 APK: $filename"
+          else
+            cp "$apk" apk-outputs/universal/
+            echo "✅ Universal APK: $filename"
+          fi
+        done
         
-        # List APK files
-        if ls release-output/*.apk 1> /dev/null 2>&1; then
-          echo "## APK Files:" >> release-output/BUILD_INFO.md
-          ls -lh release-output/*.apk >> release-output/BUILD_INFO.md
-        fi
+        # Create architecture-specific build info
+        for arch in arm64-v8a armeabi-v7a x86_64 x86 universal; do
+          if ls apk-outputs/$arch/*.apk 1> /dev/null 2>&1; then
+            echo "# Termful $arch Release" > apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Architecture**: $arch" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Date**: $(date)" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Commit**: ${{ github.sha }}" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Alpine Version**: 3.20.7" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Package**: com.termful" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "## APK File:" >> apk-outputs/$arch/BUILD_INFO.md
+            ls -lh apk-outputs/$arch/*.apk >> apk-outputs/$arch/BUILD_INFO.md
+            
+            # Create SHA256 checksum
+            cd apk-outputs/$arch
+            sha256sum *.apk > SHA256SUMS.txt
+            cd - > /dev/null
+          fi
+        done
 
-    - name: Upload release APK
+    - name: Upload ARM64 APK (Most Common)
       uses: actions/upload-artifact@v4
-      if: always()
+      if: hashFiles('apk-outputs/arm64-v8a/*.apk') != ''
       with:
-        name: termful-release-apk
-        path: release-output/
+        name: termful-arm64-v8a
+        path: apk-outputs/arm64-v8a/
+        retention-days: 90
+
+    - name: Upload ARM32 APK 
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/armeabi-v7a/*.apk') != ''
+      with:
+        name: termful-armeabi-v7a
+        path: apk-outputs/armeabi-v7a/
+        retention-days: 90
+
+    - name: Upload x86_64 APK
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/x86_64/*.apk') != ''
+      with:
+        name: termful-x86_64
+        path: apk-outputs/x86_64/
+        retention-days: 90
+
+    - name: Upload x86 APK
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/x86/*.apk') != ''
+      with:
+        name: termful-x86
+        path: apk-outputs/x86/
+        retention-days: 90
+
+    - name: Upload Universal APK (if exists)
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/universal/*.apk') != ''
+      with:
+        name: termful-universal
+        path: apk-outputs/universal/
         retention-days: 30
 
     - name: Build success summary
       if: success()
       run: |
-        echo "🎉 SUCCESS! Termful APK built with Alpine Linux 3.20.7!" >> $GITHUB_STEP_SUMMARY
+        echo "🎉 SUCCESS! Termful APKs built with Alpine Linux 3.20.7!" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🏔️ Alpine Linux Integration Complete" >> $GITHUB_STEP_SUMMARY
-        echo "- **Environment**: Alpine Linux 3.20.7" >> $GITHUB_STEP_SUMMARY  
-        echo "- **Package Manager**: APK (Alpine Package Keeper)" >> $GITHUB_STEP_SUMMARY
-        echo "- **Architectures**: All supported (aarch64, armv7, x86, x86_64)" >> $GITHUB_STEP_SUMMARY
-        echo "- **Size**: Minimal security-focused environment" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 📱 Download Your Architecture" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🎯 Mission Accomplished" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ App renamed to com.termful" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Termux bootstrap replaced with Alpine Linux" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Terminal working with Alpine on all architectures" >> $GITHUB_STEP_SUMMARY
+        
+        # Check which APKs were created and show download links
+        if [ -f "apk-outputs/arm64-v8a/"*.apk ]; then
+          echo "### 🔥 ARM64 (arm64-v8a) - Most Modern Devices" >> $GITHUB_STEP_SUMMARY
+          echo "**Download**: [termful-arm64-v8a](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Devices**: Recent Android phones, tablets (2017+)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "apk-outputs/armeabi-v7a/"*.apk ]; then
+          echo "### 📱 ARM32 (armeabi-v7a) - Older Devices" >> $GITHUB_STEP_SUMMARY  
+          echo "**Download**: [termful-armeabi-v7a](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Devices**: Older Android phones, tablets (2012-2017)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "apk-outputs/x86_64/"*.apk ]; then
+          echo "### 💻 x86_64 - Emulators & Intel Devices" >> $GITHUB_STEP_SUMMARY
+          echo "**Download**: [termful-x86_64](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY  
+          echo "**Devices**: Android emulators, Intel-based tablets" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "apk-outputs/x86/"*.apk ]; then
+          echo "### 🖥️ x86 - Legacy Intel Devices" >> $GITHUB_STEP_SUMMARY
+          echo "**Download**: [termful-x86](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Devices**: Older Intel-based Android devices" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "## 🏔️ Alpine Linux Features" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: Alpine Linux 3.20.7 (latest stable)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Package Manager**: \`apk add\`, \`apk update\`, \`apk search\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Size**: Optimized ~50-100MB per architecture" >> $GITHUB_STEP_SUMMARY
+        echo "- **Security**: Minimal, security-focused environment" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🚀 **Termful APK ready for use!**" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 🎯 Quick Start" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "# After installing Termful:" >> $GITHUB_STEP_SUMMARY
+        echo "apk update               # Update package database" >> $GITHUB_STEP_SUMMARY
+        echo "apk add bash curl git    # Install development tools" >> $GITHUB_STEP_SUMMARY
+        echo "cat /etc/alpine-release  # Check Alpine version" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "🚀 **Mission Accomplished: Termux → Termful transformation complete!**" >> $GITHUB_STEP_SUMMARY
