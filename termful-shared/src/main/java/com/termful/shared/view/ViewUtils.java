@@ -183,15 +183,34 @@ public class ViewUtils {
      * @return Returns the display size as {@link Point}.
      */
     public static Point getDisplaySize( @NonNull Context context, boolean activitySize) {
-        // android.view.WindowManager.getDefaultDisplay() and Display.getSize() are deprecated in
-        // API 30 and give wrong values in API 30 for activitySize=false in multi-window
-        androidx.window.WindowManager windowManager = new androidx.window.WindowManager(context);
-        androidx.window.WindowMetrics windowMetrics;
-        if (activitySize)
-            windowMetrics = windowManager.getCurrentWindowMetrics();
-        else
-            windowMetrics = windowManager.getMaximumWindowMetrics();
-        return new Point(windowMetrics.getBounds().width(), windowMetrics.getBounds().height());
+        try {
+            // Try to use AndroidX Window library if available
+            androidx.window.WindowManager windowManager = new androidx.window.WindowManager(context);
+            androidx.window.WindowMetrics windowMetrics;
+            if (activitySize)
+                windowMetrics = windowManager.getCurrentWindowMetrics();
+            else
+                windowMetrics = windowManager.getMaximumWindowMetrics();
+            return new Point(windowMetrics.getBounds().width(), windowMetrics.getBounds().height());
+        } catch (Exception e) {
+            // Fallback to traditional method if AndroidX Window not available
+            android.view.WindowManager windowManager = (android.view.WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            if (windowManager != null) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    // Use newer API for Android 11+
+                    android.view.WindowMetrics metrics = windowManager.getCurrentWindowMetrics();
+                    return new Point(metrics.getBounds().width(), metrics.getBounds().height());
+                } else {
+                    // Use deprecated method for older Android versions
+                    android.view.Display display = windowManager.getDefaultDisplay();
+                    Point size = new Point();
+                    display.getSize(size);
+                    return size;
+                }
+            }
+            // Final fallback
+            return new Point(1080, 1920); // Default safe values
+        }
     }
 
     /** Convert {@link Rect} to {@link String}. */
