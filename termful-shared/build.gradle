@@ -18,8 +18,9 @@ android {
         implementation "io.noties.markwon:recycler:$markwonVersion"
         implementation "org.lsposed.hiddenapibypass:hiddenapibypass:6.1"
 
-        // Updated to stable version to fix NoClassDefFoundError for WindowManager
-        implementation "androidx.window:window:1.2.0"
+        // Keep alpha version as stable versions have different API that breaks ViewUtils
+        // noinspection GradleDependency  
+        implementation "androidx.window:window:1.0.0-alpha09"
 
         // Do not increment version higher than 2.5 or there
         // will be runtime exceptions on android < 8
