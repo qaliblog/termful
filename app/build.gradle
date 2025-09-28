@@ -232,7 +232,7 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         def tempDir = new File(projectDir, "src/main/cpp/temp-" + arch)
         tempDir.mkdirs()
         
-        // Extract tar.gz with selective inclusions for functional minimal environment
+        // Extract tar.gz with very aggressive exclusions for ultra-minimal environment
         def proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath, 
                    "--exclude=var/run", "--exclude=dev", "--exclude=proc", 
                    "--exclude=sys", "--exclude=run", "--exclude=**/systemd/**",
@@ -243,7 +243,8 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                    "--exclude=usr/lib/ruby*", "--exclude=usr/include", "--exclude=lib/modules",
                    "--exclude=lib/firmware", "--exclude=usr/libexec", "--exclude=usr/sbin",
                    "--exclude=var/cache", "--exclude=var/lib", "--exclude=var/log",
-                   "--exclude=usr/local"].execute()
+                   "--exclude=usr/local", "--exclude=usr/lib/*", "--exclude=lib/*",
+                   "--exclude=usr/bin/*", "--exclude=bin/*"].execute()
         def exitCode = proc.waitFor()
         if (exitCode != 0) {
             logger.quiet("Tar extraction with exclusions failed, trying basic extraction...")
@@ -309,6 +310,61 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dirToCreate.mkdirs()
         }
         
+        // Extract only essential binaries from the original Alpine rootfs
+        logger.quiet("Copying essential binaries from Alpine rootfs...")
+        
+        // Create a temporary extraction directory for binaries
+        def binTempDir = new File(projectDir, "src/main/cpp/bin-temp-" + arch)
+        binTempDir.mkdirs()
+        
+        // Extract only essential binaries
+        def binProc = ["tar", "-xzf", tarFile.absolutePath, "-C", binTempDir.absolutePath, 
+                      "bin/busybox", "bin/sh", "usr/bin/apk", "lib/ld-musl-*.so*", "lib/libc.musl-*.so*"]
+        def binExitCode = binProc.waitFor()
+        
+        if (binExitCode == 0) {
+            // Copy essential binaries to our bootstrap
+            def essentialBinaries = [
+                "bin/busybox", "bin/sh", "usr/bin/apk"
+            ]
+            
+            essentialBinaries.each { binPath ->
+                def srcFile = new File(binTempDir, binPath)
+                def destFile = new File(tempDir, binPath)
+                if (srcFile.exists()) {
+                    destFile.parentFile.mkdirs()
+                    srcFile.withInputStream { input ->
+                        destFile.withOutputStream { output ->
+                            output << input
+                        }
+                    }
+                    logger.quiet("Copied essential binary: " + binPath)
+                }
+            }
+            
+            // Copy essential libraries
+            def libDir = new File(binTempDir, "lib")
+            if (libDir.exists()) {
+                libDir.listFiles()?.each { libFile ->
+                    if (libFile.name.startsWith("ld-musl") || libFile.name.startsWith("libc.musl")) {
+                        def destLibFile = new File(tempDir, "lib/" + libFile.name)
+                        destLibFile.parentFile.mkdirs()
+                        libFile.withInputStream { input ->
+                            destLibFile.withOutputStream { output ->
+                                output << input
+                            }
+                        }
+                        logger.quiet("Copied essential library: " + libFile.name)
+                    }
+                }
+            }
+        }
+        
+        // Clean up binary temp directory
+        if (binTempDir.exists()) {
+            binTempDir.deleteDir()
+        }
+        
         try {
             def ant = new groovy.util.AntBuilder()
             ant.zip(destfile: file.absolutePath, compress: true, level: 9) {
@@ -360,6 +416,7 @@ clean {
         tree.include 'bootstrap-*.zip'
         tree.include 'alpine-minirootfs-*.tar.gz'
         tree.include 'temp-*'
+        tree.include 'bin-temp-*'
         tree.each { it.delete() }
     }
 }
