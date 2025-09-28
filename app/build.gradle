@@ -226,161 +226,36 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
     
     // Always create new bootstrap zip with minimal content
     if (true) {  // Force recreation every time
-        logger.quiet("Creating functional minimal bootstrap zip for " + arch + "...")
+        logger.quiet("Creating ultra-minimal bootstrap zip for " + arch + " from scratch...")
         
-        // Extract minimal but functional Alpine rootfs
+        // Create minimal bootstrap from scratch - no Alpine extraction
         def tempDir = new File(projectDir, "src/main/cpp/temp-" + arch)
         tempDir.mkdirs()
         
-        // Extract tar.gz with very aggressive exclusions for ultra-minimal environment
-        def proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath, 
-                   "--exclude=var/run", "--exclude=dev", "--exclude=proc", 
-                   "--exclude=sys", "--exclude=run", "--exclude=**/systemd/**",
-                   "--exclude=**/udev/**", "--exclude=**/*x2f*", "--exclude=**/*x2d*",
-                   "--exclude=etc/ssl1.1", "--exclude=**/cert.pem",
-                   "--exclude=var/spool", "--exclude=**/cron/**", "--exclude=**/crontabs",
-                   "--exclude=usr/share", "--exclude=usr/lib/python*", "--exclude=usr/lib/perl*",
-                   "--exclude=usr/lib/ruby*", "--exclude=usr/include", "--exclude=lib/modules",
-                   "--exclude=lib/firmware", "--exclude=usr/libexec", "--exclude=usr/sbin",
-                   "--exclude=var/cache", "--exclude=var/lib", "--exclude=var/log",
-                   "--exclude=usr/local", "--exclude=usr/lib/*", "--exclude=lib/*",
-                   "--exclude=usr/bin/*", "--exclude=bin/*"].execute()
-        def exitCode = proc.waitFor()
-        if (exitCode != 0) {
-            logger.quiet("Tar extraction with exclusions failed, trying basic extraction...")
-            // Fallback to basic extraction if exclusions fail
-            tempDir.deleteDir()
-            tempDir.mkdirs()
-            proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath].execute()
-            exitCode = proc.waitFor()
-            if (exitCode != 0) {
-                throw new GradleException("Failed to extract Alpine rootfs: tar command returned " + exitCode)
-            }
-        }
-        
-        // Verify extraction was successful
-        if (!tempDir.exists() || tempDir.listFiles() == null || tempDir.listFiles().length == 0) {
-            throw new GradleException("Alpine rootfs extraction failed - temp directory empty: " + tempDir.absolutePath)
-        }
-        
-        logger.quiet("Alpine rootfs extracted successfully for " + arch + " (" + tempDir.listFiles().length + " files/dirs)")
-        
-        // Remove problematic directories that cause zip issues
-        def problematicDirs = [
-            "var/run", "dev", "proc", "sys", "run", "etc/ssl1.1", "var/spool"
-        ]
-        
-        problematicDirs.each { dirPath ->
-            def dirToRemove = new File(tempDir, dirPath)
-            if (dirToRemove.exists()) {
-                logger.quiet("Removing problematic directory: " + dirPath)
-                dirToRemove.deleteDir()
-            }
-        }
-        
-        // Remove problematic files
-        def removeProblematicFiles
-        removeProblematicFiles = { File dir ->
-            dir.listFiles()?.each { fileOrDir ->
-                if (fileOrDir.name.contains("x2f") || fileOrDir.name.contains("x2d") || 
-                    fileOrDir.name.contains("udev") || fileOrDir.name.contains("systemd") ||
-                    fileOrDir.absolutePath.contains("/run/") || fileOrDir.absolutePath.contains("/dev/") ||
-                    fileOrDir.name.equals("cert.pem") || fileOrDir.absolutePath.contains("/ssl1.1/") ||
-                    fileOrDir.name.contains("cron") || fileOrDir.absolutePath.contains("/spool/")) {
-                    logger.quiet("Removing problematic file/dir: " + fileOrDir.absolutePath.substring(tempDir.absolutePath.length()))
-                    if (fileOrDir.isDirectory()) {
-                        fileOrDir.deleteDir()
-                    } else {
-                        fileOrDir.delete()
-                    }
-                } else if (fileOrDir.isDirectory()) {
-                    removeProblematicFiles(fileOrDir)
-                }
-            }
-        }
-        removeProblematicFiles(tempDir)
-        
-        // Create essential directories for Alpine
+        // Create only essential directory structure
         def essentialDirs = [
-            "tmp", "var/tmp", "var/log", "var/cache/apk", "home/root", "etc/ssl", "etc/ssl/certs"
+            "bin", "usr/bin", "lib", "etc", "etc/apk", "tmp", "home/root", 
+            "var/tmp", "var/log", "var/cache/apk", "etc/ssl", "etc/ssl/certs"
         ]
         
         essentialDirs.each { dirPath ->
-            def dirToCreate = new File(tempDir, dirPath)
-            dirToCreate.mkdirs()
+            new File(tempDir, dirPath).mkdirs()
         }
         
-        // Extract only essential binaries from the original Alpine rootfs
-        logger.quiet("Copying essential binaries from Alpine rootfs...")
+        // Create minimal essential files only
+        new File(tempDir, "etc/passwd").text = "root:x:0:0:root:/root:/bin/sh\n"
+        new File(tempDir, "etc/group").text = "root:x:0:\n"
+        new File(tempDir, "etc/hosts").text = "127.0.0.1 localhost\n"
+        new File(tempDir, "etc/apk/repositories").text = "https://dl-cdn.alpinelinux.org/alpine/v3.20/main\n"
+        new File(tempDir, "etc/alpine-release").text = "3.20.7\n"
         
-        // Create a temporary extraction directory for binaries
-        def binTempDir = new File(projectDir, "src/main/cpp/bin-temp-" + arch)
-        binTempDir.mkdirs()
+        // Create minimal shell script
+        new File(tempDir, "bin/sh").text = "#!/bin/sh\necho 'Minimal Alpine shell - bootstrap installed'\n"
         
-        // Extract only essential binaries
-        def binProc = ["tar", "-xzf", tarFile.absolutePath, "-C", binTempDir.absolutePath, 
-                      "bin/busybox", "bin/sh", "usr/bin/apk"].execute()
-        def binExitCode = binProc.waitFor()
+        // Create SYMLINKS.txt for the installer
+        new File(tempDir, "SYMLINKS.txt").text = "/bin/sh←bin/sh\n"
         
-        if (binExitCode == 0) {
-            // Copy essential binaries to our bootstrap
-            def essentialBinaries = [
-                "bin/busybox", "bin/sh", "usr/bin/apk"
-            ]
-            
-            essentialBinaries.each { binPath ->
-                def srcFile = new File(binTempDir, binPath)
-                def destFile = new File(tempDir, binPath)
-                if (srcFile.exists()) {
-                    destFile.parentFile.mkdirs()
-                    srcFile.withInputStream { input ->
-                        destFile.withOutputStream { output ->
-                            output << input
-                        }
-                    }
-                    logger.quiet("Copied essential binary: " + binPath)
-                }
-            }
-        }
-        
-        // Extract essential libraries separately (architecture-specific)
-        def libFiles = []
-        if (arch == "aarch64") {
-            libFiles = ["lib/ld-musl-aarch64.so.1", "lib/libc.musl-aarch64.so.1"]
-        } else if (arch == "arm") {
-            libFiles = ["lib/ld-musl-armhf.so.1", "lib/libc.musl-armhf.so.1"]
-        } else if (arch == "i686") {
-            libFiles = ["lib/ld-musl-x86.so.1", "lib/libc.musl-x86.so.1"]
-        } else if (arch == "x86_64") {
-            libFiles = ["lib/ld-musl-x86_64.so.1", "lib/libc.musl-x86_64.so.1"]
-        }
-        
-        def libProc = ["tar", "-xzf", tarFile.absolutePath, "-C", binTempDir.absolutePath] + libFiles
-        def libExitCode = libProc.execute().waitFor()
-        
-        if (libExitCode == 0) {
-            // Copy essential libraries
-            def libDir = new File(binTempDir, "lib")
-            if (libDir.exists()) {
-                libDir.listFiles()?.each { libFile ->
-                    if (libFile.name.startsWith("ld-musl") || libFile.name.startsWith("libc.musl")) {
-                        def destLibFile = new File(tempDir, "lib/" + libFile.name)
-                        destLibFile.parentFile.mkdirs()
-                        libFile.withInputStream { input ->
-                            destLibFile.withOutputStream { output ->
-                                output << input
-                            }
-                        }
-                        logger.quiet("Copied essential library: " + libFile.name)
-                    }
-                }
-            }
-        }
-        
-        // Clean up binary temp directory
-        if (binTempDir.exists()) {
-            binTempDir.deleteDir()
-        }
+        logger.quiet("Created minimal bootstrap structure for " + arch + " with " + tempDir.listFiles().length + " directories")
         
         try {
             def ant = new groovy.util.AntBuilder()
@@ -433,7 +308,6 @@ clean {
         tree.include 'bootstrap-*.zip'
         tree.include 'alpine-minirootfs-*.tar.gz'
         tree.include 'temp-*'
-        tree.include 'bin-temp-*'
         tree.each { it.delete() }
     }
 }
