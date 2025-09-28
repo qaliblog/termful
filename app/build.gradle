@@ -334,10 +334,10 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         logger.quiet("Creating ultra-minimal Alpine environment for mobile memory constraints...")
         
         // Create only essential directory structure
-        def essentialDirs = [
+        def minimalDirs = [
             "bin", "usr/bin", "lib", "etc", "etc/apk", "tmp", "home/root"
         ]
-        essentialDirs.each { dirPath ->
+        minimalDirs.each { dirPath ->
             new File(tempDir, dirPath).mkdirs()
         }
         
