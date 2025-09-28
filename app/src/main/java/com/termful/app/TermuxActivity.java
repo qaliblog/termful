@@ -41,6 +41,7 @@ import com.termful.shared.termux.TermuxConstants;
 import com.termful.shared.termux.TermuxConstants.TERMUX_APP.TERMUX_ACTIVITY;
 import com.termful.app.activities.HelpActivity;
 import com.termful.app.activities.SettingsActivity;
+import com.termful.app.activities.DistributionSelectorActivity;
 import com.termful.shared.termux.crash.TermuxCrashUtils;
 import com.termful.shared.termux.settings.preferences.TermuxAppSharedPreferences;
 import com.termful.app.terminal.TermuxSessionsListViewController;
@@ -396,18 +397,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
         if (mTermuxService.isTermuxSessionsEmpty()) {
             if (mIsVisible) {
-                TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
-                    if (mTermuxService == null) return; // Activity might have been destroyed.
-                    try {
-                        boolean launchFailsafe = false;
-                        if (intent != null && intent.getExtras() != null) {
-                            launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
-                        }
-                        mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
-                    } catch (WindowManager.BadTokenException e) {
-                        // Activity finished - ignore.
-                    }
-                });
+                showDistributionSelector();
             } else {
                 // The service connected while not in foreground - just bail out.
                 finishActivityIfNotFinishing();
@@ -1013,6 +1003,45 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         Intent intent = new Intent(context, TermuxActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return intent;
+    }
+
+    private void showDistributionSelector() {
+        Intent intent = new Intent(this, DistributionSelectorActivity.class);
+        startActivityForResult(intent, 2001);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        if (requestCode == 2001 && resultCode == RESULT_OK && data != null) {
+            String distribution = data.getStringExtra(DistributionSelectorActivity.EXTRA_DISTRIBUTION);
+            String downloadUrl = data.getStringExtra(DistributionSelectorActivity.EXTRA_DOWNLOAD_URL);
+            
+            Logger.logInfo(LOG_TAG, "Distribution selected: " + distribution);
+            
+            // Proceed with bootstrap installation
+            proceedWithBootstrapInstallation(distribution, downloadUrl);
+        } else if (requestCode == 2001) {
+            // User cancelled, proceed with minimal bootstrap
+            proceedWithBootstrapInstallation("minimal", null);
+        }
+    }
+
+    private void proceedWithBootstrapInstallation(String distribution, String downloadUrl) {
+        TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
+            if (mTermuxService == null) return; // Activity might have been destroyed.
+            try {
+                boolean launchFailsafe = false;
+                Intent intent = getIntent();
+                if (intent != null && intent.getExtras() != null) {
+                    launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
+                }
+                mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
+            } catch (WindowManager.BadTokenException e) {
+                // Activity finished - ignore.
+            }
+        });
     }
 
 }
