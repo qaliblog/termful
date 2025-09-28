@@ -98,13 +98,6 @@ jobs:
         echo "=== Gradle cache size ==="
         du -sh .gradle/ 2>/dev/null || echo "No .gradle directory"
 
-    - name: Build debug APK (for testing)
-      run: |
-        # Build debug version for testing the new feature
-        ./gradlew assembleDebug --stacktrace --no-daemon --max-workers=2
-      env:
-        GRADLE_OPTS: "-Xmx2048m -Dfile.encoding=UTF-8"
-
     - name: Build release APK
       run: |
         # Build release version
