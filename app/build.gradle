@@ -319,7 +319,7 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         
         // Extract only essential binaries
         def binProc = ["tar", "-xzf", tarFile.absolutePath, "-C", binTempDir.absolutePath, 
-                      "bin/busybox", "bin/sh", "usr/bin/apk", "lib/ld-musl-*.so*", "lib/libc.musl-*.so*"]
+                      "bin/busybox", "bin/sh", "usr/bin/apk"].execute()
         def binExitCode = binProc.waitFor()
         
         if (binExitCode == 0) {
@@ -341,7 +341,24 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                     logger.quiet("Copied essential binary: " + binPath)
                 }
             }
-            
+        }
+        
+        // Extract essential libraries separately (architecture-specific)
+        def libFiles = []
+        if (arch == "aarch64") {
+            libFiles = ["lib/ld-musl-aarch64.so.1", "lib/libc.musl-aarch64.so.1"]
+        } else if (arch == "arm") {
+            libFiles = ["lib/ld-musl-armhf.so.1", "lib/libc.musl-armhf.so.1"]
+        } else if (arch == "i686") {
+            libFiles = ["lib/ld-musl-x86.so.1", "lib/libc.musl-x86.so.1"]
+        } else if (arch == "x86_64") {
+            libFiles = ["lib/ld-musl-x86_64.so.1", "lib/libc.musl-x86_64.so.1"]
+        }
+        
+        def libProc = ["tar", "-xzf", tarFile.absolutePath, "-C", binTempDir.absolutePath] + libFiles
+        def libExitCode = libProc.execute().waitFor()
+        
+        if (libExitCode == 0) {
             // Copy essential libraries
             def libDir = new File(binTempDir, "lib")
             if (libDir.exists()) {
