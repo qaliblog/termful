@@ -208,6 +208,9 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
     def file = new File(projectDir, localUrl)
     def tarFile = new File(projectDir, "src/main/cpp/alpine-minirootfs-" + alpineArch + ".tar.gz")
     
+    // Always recreate bootstrap zips to ensure filtering takes effect
+    file.delete()
+    
     // Download Alpine minirootfs if it doesn't exist
     if (!tarFile.exists()) {
         def remoteUrl = "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/" + alpineArch + "/alpine-minirootfs-" + alpineVersion + "-" + alpineArch + ".tar.gz"
@@ -221,8 +224,8 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         out.close()
     }
     
-    // Create bootstrap zip from Alpine rootfs
-    if (!file.exists() || file.lastModified() < tarFile.lastModified()) {
+    // Always create new bootstrap zip with minimal content
+    if (true) {  // Force recreation every time
         logger.quiet("Creating bootstrap zip for " + arch + " from Alpine rootfs...")
         
         // Extract and repackage as zip
@@ -327,58 +330,40 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dirToCreate.mkdirs()
         }
         
-        // Create ultra-minimal Alpine content for mobile memory constraints  
+        // Create minimal placeholder Alpine environment for mobile
+        logger.quiet("Creating minimal Alpine placeholder for mobile memory constraints...")
+        
+        // Create minimal directory structure
+        def minimalDirs = [
+            "bin", "sbin", "usr/bin", "usr/sbin", "lib", "usr/lib", 
+            "etc", "etc/apk", "var/cache/apk", "tmp", "home/root"
+        ]
+        minimalDirs.each { dirPath ->
+            new File(tempDir, dirPath).mkdirs()
+        }
+        
+        // Create minimal essential files
+        new File(tempDir, "etc/passwd").text = "root:x:0:0:root:/root:/bin/sh\n"
+        new File(tempDir, "etc/group").text = "root:x:0:\n"
+        new File(tempDir, "etc/hosts").text = "127.0.0.1 localhost\n"
+        new File(tempDir, "etc/apk/repositories").text = "https://dl-cdn.alpinelinux.org/alpine/v3.20/main\n"
+        new File(tempDir, "etc/alpine-release").text = "3.20.7\n"
+        
+        // Copy only essential binaries if they exist
+        def essentialBins = ["sh", "busybox", "apk"]
+        essentialBins.each { binName ->
+            def srcBin = new File(tempDir.parentFile.parentFile, "temp-" + arch + "/bin/" + binName)
+            def dstBin = new File(tempDir, "bin/" + binName)
+            if (srcBin.exists()) {
+                srcBin.renameTo(dstBin)
+            }
+        }
+        
         try {
             def ant = new groovy.util.AntBuilder()
             ant.zip(destfile: file.absolutePath) {
                 fileset(dir: tempDir.absolutePath) {
-                    // Start with everything, then aggressively exclude
                     include(name: "**/*")
-                    
-                    // Exclude large directories that cause memory issues
-                    exclude(name: "usr/share/**")  // Large shared data (except APK)
-                    exclude(name: "usr/lib/python*/**")  // Python libraries
-                    exclude(name: "usr/lib/perl*/**")    // Perl libraries  
-                    exclude(name: "usr/lib/ruby*/**")    // Ruby libraries
-                    exclude(name: "usr/lib/node*/**")    // Node libraries
-                    exclude(name: "usr/lib/gcc/**")      // GCC toolchain
-                    exclude(name: "usr/include/**")      // Header files
-                    exclude(name: "lib/modules/**")      // Kernel modules
-                    exclude(name: "lib/firmware/**")     // Firmware files
-                    
-                    // Exclude documentation and localization  
-                    exclude(name: "**/man/**")
-                    exclude(name: "**/doc/**")
-                    exclude(name: "**/info/**")
-                    exclude(name: "**/locale/**")
-                    exclude(name: "**/zoneinfo/**")
-                    exclude(name: "**/terminfo/**")
-                    
-                    // Exclude problematic system files
-                    exclude(name: "**/systemd/**")
-                    exclude(name: "**/dev/**")
-                    exclude(name: "**/proc/**") 
-                    exclude(name: "**/sys/**")
-                    exclude(name: "**/run/**")
-                    exclude(name: "**/udev/**")
-                    exclude(name: "**/*device*")
-                    exclude(name: "**/*x2f*")
-                    exclude(name: "**/*x2d*")
-                    exclude(name: "**/*azure*")
-                    exclude(name: "**/*resource*")
-                    exclude(name: "**/links/**")
-                    exclude(name: "**/spool/**")
-                    exclude(name: "**/cron/**")
-                    exclude(name: "**/crontabs")
-                }
-            }
-            
-            // Re-add essential APK files that might have been excluded
-            ant.zip(destfile: file.absolutePath, update: true) {
-                fileset(dir: tempDir.absolutePath) {
-                    include(name: "etc/apk/**")
-                    include(name: "var/cache/apk/**") 
-                    include(name: "usr/share/apk/**")
                 }
             }
             
