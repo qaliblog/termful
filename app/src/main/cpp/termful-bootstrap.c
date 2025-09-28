@@ -28,3 +28,37 @@ JNIEXPORT jlong JNICALL Java_com_termful_app_TermuxInstaller_getZipSize(JNIEnv *
     // Return the size of the embedded zip blob
     return (jlong) blob_size;
 }
+
+JNIEXPORT jint JNICALL Java_com_termful_app_TermuxInstaller_getZipChunk(JNIEnv *env, __attribute__((__unused__)) jobject This, jlong offset, jbyteArray buffer, jint maxBytes)
+{
+    // Validate parameters
+    if (offset < 0 || offset >= blob_size) {
+        return 0; // No more data
+    }
+    
+    if (buffer == NULL || maxBytes <= 0) {
+        return 0; // Invalid parameters
+    }
+    
+    // Calculate how many bytes we can actually read
+    jlong remainingBytes = blob_size - offset;
+    jint bytesToRead = (jint) ((remainingBytes < maxBytes) ? remainingBytes : maxBytes);
+    
+    if (bytesToRead <= 0) {
+        return 0; // No more data
+    }
+    
+    // Get the buffer array and copy data
+    jbyte* bufferPtr = (*env)->GetByteArrayElements(env, buffer, NULL);
+    if (bufferPtr == NULL) {
+        return 0; // Failed to get buffer
+    }
+    
+    // Copy the chunk of data from the blob
+    memcpy(bufferPtr, blob + offset, bytesToRead);
+    
+    // Release the buffer
+    (*env)->ReleaseByteArrayElements(env, buffer, bufferPtr, 0);
+    
+    return bytesToRead;
+}

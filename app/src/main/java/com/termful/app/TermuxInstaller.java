@@ -27,6 +27,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -156,8 +157,8 @@ final class TermuxInstaller {
                     final byte[] buffer = new byte[8096];
                     final List<Pair<String, String>> symlinks = new ArrayList<>(50);
 
-                    final byte[] zipBytes = loadZipBytes();
-                    try (ZipInputStream zipInput = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+                    // Use streaming extraction to avoid loading entire zip into memory
+                    try (ZipInputStream zipInput = new ZipInputStream(new BootstrapZipInputStream())) {
                         ZipEntry zipEntry;
                         while ((zipEntry = zipInput.getNextEntry()) != null) {
                             if (zipEntry.getName().equals("SYMLINKS.txt")) {
@@ -377,35 +378,118 @@ final class TermuxInstaller {
         return FileUtils.createDirectoryFile(directory.getAbsolutePath());
     }
 
-    public static byte[] loadZipBytes() {
-        // Only load the shared library when necessary to save memory usage.
-        System.loadLibrary("termful-bootstrap");
-        
-        // Get zip data size first to check if it's reasonable
-        long zipSize = getZipSize();
-        if (zipSize <= 0) {
-            throw new RuntimeException("Failed to load Alpine Linux bootstrap: native getZipSize() returned " + zipSize + ". " +
-                "This usually means the bootstrap zip files were not properly embedded during build. " +
-                "Please check build logs for bootstrap zip creation errors.");
-        }
-        
-        // Check if zip size is reasonable (less than 100MB to avoid OOM)
-        if (zipSize > 100 * 1024 * 1024) {
-            throw new RuntimeException("Bootstrap zip file is too large (" + (zipSize / 1024 / 1024) + " MB). " +
-                "This exceeds the memory limit for mobile devices. Please reduce the bootstrap size.");
-        }
-        
-        byte[] zipData = getZip();
-        if (zipData == null) {
-            throw new RuntimeException("Failed to load Alpine Linux bootstrap: native getZip() returned null. " +
-                "This usually means the bootstrap zip files were not properly embedded during build. " +
-                "Please check build logs for bootstrap zip creation errors.");
-        }
-        Logger.logInfo(LOG_TAG, "Loaded Alpine Linux bootstrap data: " + zipData.length + " bytes");
-        return zipData;
-    }
 
     public static native byte[] getZip();
     public static native long getZipSize();
+    public static native int getZipChunk(long offset, byte[] buffer, int maxBytes);
+
+    /**
+     * Custom InputStream that streams zip data directly from native library in chunks
+     * to avoid loading the entire zip file into memory at once.
+     */
+    private static class BootstrapZipInputStream extends InputStream {
+        private static final int CHUNK_SIZE = 64 * 1024; // 64KB chunks
+        private long position = 0;
+        private long totalSize;
+        private byte[] currentChunk;
+        private int chunkOffset = 0;
+        private int chunkLength = 0;
+        
+        public BootstrapZipInputStream() {
+            // Only load the shared library when necessary to save memory usage.
+            System.loadLibrary("termful-bootstrap");
+            
+            totalSize = getZipSize();
+            if (totalSize <= 0) {
+                throw new RuntimeException("Failed to load Alpine Linux bootstrap: native getZipSize() returned " + totalSize + ". " +
+                    "This usually means the bootstrap zip files were not properly embedded during build. " +
+                    "Please check build logs for bootstrap zip creation errors.");
+            }
+            
+            // Check if zip size is reasonable (less than 500MB to avoid OOM)
+            if (totalSize > 500 * 1024 * 1024) {
+                throw new RuntimeException("Bootstrap zip file is too large (" + (totalSize / 1024 / 1024) + " MB). " +
+                    "This exceeds the memory limit for mobile devices. Please reduce the bootstrap size.");
+            }
+            
+            Logger.logInfo(LOG_TAG, "Streaming Alpine Linux bootstrap data: " + totalSize + " bytes");
+        }
+        
+        @Override
+        public int read() throws java.io.IOException {
+            if (position >= totalSize) {
+                return -1;
+            }
+            
+            if (chunkOffset >= chunkLength) {
+                if (!loadNextChunk()) {
+                    return -1;
+                }
+            }
+            
+            int result = currentChunk[chunkOffset] & 0xFF;
+            chunkOffset++;
+            position++;
+            return result;
+        }
+        
+        @Override
+        public int read(byte[] b, int off, int len) throws java.io.IOException {
+            if (position >= totalSize) {
+                return -1;
+            }
+            
+            int totalRead = 0;
+            while (len > 0 && position < totalSize) {
+                if (chunkOffset >= chunkLength) {
+                    if (!loadNextChunk()) {
+                        break;
+                    }
+                }
+                
+                int availableInChunk = chunkLength - chunkOffset;
+                int bytesToRead = Math.min(len, availableInChunk);
+                
+                System.arraycopy(currentChunk, chunkOffset, b, off, bytesToRead);
+                
+                chunkOffset += bytesToRead;
+                position += bytesToRead;
+                off += bytesToRead;
+                len -= bytesToRead;
+                totalRead += bytesToRead;
+            }
+            
+            return totalRead > 0 ? totalRead : -1;
+        }
+        
+        private boolean loadNextChunk() throws java.io.IOException {
+            if (position >= totalSize) {
+                return false;
+            }
+            
+            if (currentChunk == null) {
+                currentChunk = new byte[CHUNK_SIZE];
+            }
+            
+            long remainingBytes = totalSize - position;
+            int bytesToRead = (int) Math.min(CHUNK_SIZE, remainingBytes);
+            
+            int bytesRead = getZipChunk(position, currentChunk, bytesToRead);
+            if (bytesRead <= 0) {
+                throw new java.io.IOException("Failed to read zip chunk at position " + position + 
+                    ". Expected " + bytesToRead + " bytes, got " + bytesRead);
+            }
+            
+            chunkOffset = 0;
+            chunkLength = bytesRead;
+            return true;
+        }
+        
+        @Override
+        public void close() throws java.io.IOException {
+            currentChunk = null;
+            super.close();
+        }
+    }
 
 }
