@@ -349,7 +349,7 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         new File(tempDir, "etc/alpine-release").text = "3.20.7\n"
         
         // Create minimal busybox symlinks for essential commands
-        def busyboxCommands = ["sh", "ls", "cat", "echo", "mkdir", "rm", "cp", "mv", "ln", "chmod", "chown"]
+        def busyboxCommands = ["ls", "cat", "echo", "mkdir", "rm", "cp", "mv", "ln", "chmod", "chown"]
         busyboxCommands.each { cmd ->
             new File(tempDir, "bin/" + cmd).text = ""  // Create empty file as placeholder
         }
