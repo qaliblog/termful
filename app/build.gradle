@@ -229,13 +229,16 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         def tempDir = new File(projectDir, "src/main/cpp/temp-" + arch)
         tempDir.mkdirs()
         
-        // Extract tar.gz with exclusions to avoid problematic files
+        // Extract tar.gz with aggressive exclusions for minimal mobile environment
         def proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath, 
                    "--exclude=var/run", "--exclude=dev", "--exclude=proc", 
                    "--exclude=sys", "--exclude=run", "--exclude=**/systemd/**",
                    "--exclude=**/udev/**", "--exclude=**/*x2f*", "--exclude=**/*x2d*",
                    "--exclude=etc/ssl1.1", "--exclude=**/cert.pem",
-                   "--exclude=var/spool", "--exclude=**/cron/**", "--exclude=**/crontabs"].execute()
+                   "--exclude=var/spool", "--exclude=**/cron/**", "--exclude=**/crontabs",
+                   "--exclude=usr/share", "--exclude=usr/lib/python*", "--exclude=usr/lib/perl*",
+                   "--exclude=usr/lib/ruby*", "--exclude=usr/include", "--exclude=lib/modules",
+                   "--exclude=lib/firmware"].execute()
         def exitCode = proc.waitFor()
         if (exitCode != 0) {
             logger.quiet("Tar extraction with exclusions failed, trying basic extraction...")
@@ -423,6 +426,11 @@ clean {
 task downloadBootstraps() {
     doLast {
         def alpineVersion = "3.20.7"  // Latest stable Alpine Linux version
+        
+        // Force clean bootstrap zips to ensure filtering takes effect
+        def tree = fileTree(new File(projectDir, 'src/main/cpp'))
+        tree.include 'bootstrap-*.zip'
+        tree.each { it.delete() }
         
         // Map Android ABI to Alpine architecture
         downloadAlpineRootfs("aarch64", "aarch64", alpineVersion)
