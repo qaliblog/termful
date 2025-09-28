@@ -226,116 +226,18 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
     
     // Always create new bootstrap zip with minimal content
     if (true) {  // Force recreation every time
-        logger.quiet("Creating bootstrap zip for " + arch + " from Alpine rootfs...")
+        logger.quiet("Creating ultra-minimal bootstrap zip for " + arch + " from scratch...")
         
-        // Extract and repackage as zip
+        // Create minimal bootstrap from scratch instead of extracting Alpine rootfs
         def tempDir = new File(projectDir, "src/main/cpp/temp-" + arch)
         tempDir.mkdirs()
-        
-        // Extract tar.gz with aggressive exclusions for minimal mobile environment
-        def proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath, 
-                   "--exclude=var/run", "--exclude=dev", "--exclude=proc", 
-                   "--exclude=sys", "--exclude=run", "--exclude=**/systemd/**",
-                   "--exclude=**/udev/**", "--exclude=**/*x2f*", "--exclude=**/*x2d*",
-                   "--exclude=etc/ssl1.1", "--exclude=**/cert.pem",
-                   "--exclude=var/spool", "--exclude=**/cron/**", "--exclude=**/crontabs",
-                   "--exclude=usr/share", "--exclude=usr/lib/python*", "--exclude=usr/lib/perl*",
-                   "--exclude=usr/lib/ruby*", "--exclude=usr/include", "--exclude=lib/modules",
-                   "--exclude=lib/firmware"].execute()
-        def exitCode = proc.waitFor()
-        if (exitCode != 0) {
-            logger.quiet("Tar extraction with exclusions failed, trying basic extraction...")
-            // Fallback to basic extraction if exclusions fail
-            tempDir.deleteDir()
-            tempDir.mkdirs()
-            proc = ["tar", "-xzf", tarFile.absolutePath, "-C", tempDir.absolutePath].execute()
-            exitCode = proc.waitFor()
-            if (exitCode != 0) {
-                throw new GradleException("Failed to extract Alpine rootfs: tar command returned " + exitCode)
-            }
-        }
-        
-        // Verify extraction was successful
-        if (!tempDir.exists() || tempDir.listFiles() == null || tempDir.listFiles().length == 0) {
-            throw new GradleException("Alpine rootfs extraction failed - temp directory empty: " + tempDir.absolutePath)
-        }
-        
-        logger.quiet("Alpine rootfs extracted successfully for " + arch + " (" + tempDir.listFiles().length + " files/dirs)")
-        
-        // Debug: List some key directories to verify content
-        def importantDirs = ["bin", "usr/bin", "lib", "etc"]
-        importantDirs.each { dirPath ->
-            def dir = new File(tempDir, dirPath)
-            if (dir.exists()) {
-                logger.quiet("Found important directory: " + dirPath + " with " + dir.listFiles().length + " items")
-            } else {
-                logger.quiet("Missing directory: " + dirPath)
-            }
-        }
-        
-        // Remove problematic directories that cause zip issues
-        def problematicDirs = [
-            "var/run",  // Remove entire var/run to avoid systemd and udev issues
-            "dev",
-            "proc", 
-            "sys",
-            "run",
-            "etc/ssl1.1",  // Remove SSL 1.1 certificates (can cause symlink issues)
-            "var/spool"    // Remove spool directory (cron, mail, etc. with permission issues)
-        ]
-        
-        problematicDirs.each { dirPath ->
-            def dirToRemove = new File(tempDir, dirPath)
-            if (dirToRemove.exists()) {
-                logger.quiet("Removing problematic directory: " + dirPath)
-                dirToRemove.deleteDir()
-            }
-        }
-        
-        // Also remove any files with problematic characters
-        def removeProblematicFiles
-        removeProblematicFiles = { File dir ->
-            dir.listFiles()?.each { fileOrDir ->
-                if (fileOrDir.name.contains("x2f") || fileOrDir.name.contains("x2d") || 
-                    fileOrDir.name.contains("udev") || fileOrDir.name.contains("systemd") ||
-                    fileOrDir.absolutePath.contains("/run/") || fileOrDir.absolutePath.contains("/dev/") ||
-                    fileOrDir.name.equals("cert.pem") || fileOrDir.absolutePath.contains("/ssl1.1/") ||
-                    fileOrDir.name.contains("cron") || fileOrDir.absolutePath.contains("/spool/")) {
-                    logger.quiet("Removing problematic file/dir: " + fileOrDir.absolutePath.substring(tempDir.absolutePath.length()))
-                    if (fileOrDir.isDirectory()) {
-                        fileOrDir.deleteDir()
-                    } else {
-                        fileOrDir.delete()
-                    }
-                } else if (fileOrDir.isDirectory()) {
-                    removeProblematicFiles(fileOrDir)
-                }
-            }
-        }
-        removeProblematicFiles(tempDir)
-        
-        // Create essential directories for Alpine
-        def essentialDirs = [
-            "tmp",
-            "var/tmp", 
-            "var/log",
-            "var/cache/apk",
-            "home/root",
-            "etc/ssl",
-            "etc/ssl/certs"
-        ]
-        
-        essentialDirs.each { dirPath ->
-            def dirToCreate = new File(tempDir, dirPath)
-            dirToCreate.mkdirs()
-        }
         
         // Create ultra-minimal Alpine environment for mobile memory constraints
         logger.quiet("Creating ultra-minimal Alpine environment for mobile memory constraints...")
         
         // Create only essential directory structure
         def minimalDirs = [
-            "bin", "usr/bin", "lib", "etc", "etc/apk", "tmp", "home/root"
+            "bin", "usr/bin", "lib", "etc", "etc/apk", "tmp", "home/root", "var/tmp", "var/log", "var/cache/apk"
         ]
         minimalDirs.each { dirPath ->
             new File(tempDir, dirPath).mkdirs()
@@ -347,16 +249,6 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         new File(tempDir, "etc/hosts").text = "127.0.0.1 localhost\n"
         new File(tempDir, "etc/apk/repositories").text = "https://dl-cdn.alpinelinux.org/alpine/v3.20/main\n"
         new File(tempDir, "etc/alpine-release").text = "3.20.7\n"
-        
-        // Remove existing bin files that might have permission issues
-        def binDir = new File(tempDir, "bin")
-        if (binDir.exists()) {
-            binDir.listFiles()?.each { binFile ->
-                if (binFile.isFile()) {
-                    binFile.delete()
-                }
-            }
-        }
         
         // Create minimal busybox symlinks for essential commands
         def busyboxCommands = ["ls", "cat", "echo", "mkdir", "rm", "cp", "mv", "ln", "chmod", "chown"]
