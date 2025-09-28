@@ -324,35 +324,28 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dirToCreate.mkdirs()
         }
         
-        // Create zip with filtered content - functional Alpine for Android
+        // Create zip with minimal Alpine content for mobile memory constraints
         try {
             def ant = new groovy.util.AntBuilder()
             ant.zip(destfile: file.absolutePath) {
                 fileset(dir: tempDir.absolutePath) {
-                    // Include all essential Alpine components
-                    include(name: "**/*")
-                    
-                    // Exclude only problematic patterns (but keep more content)
-                    exclude(name: "**/systemd/**")
-                    exclude(name: "**/dev/**")
-                    exclude(name: "**/proc/**") 
-                    exclude(name: "**/sys/**")
-                    exclude(name: "**/run/**")
-                    exclude(name: "**/udev/**")
-                    exclude(name: "**/*device*")
-                    exclude(name: "**/*x2f*")
-                    exclude(name: "**/*x2d*")
-                    exclude(name: "**/*azure*")
-                    exclude(name: "**/*resource*")
-                    exclude(name: "**/links/**")
-                    exclude(name: "**/spool/**")
-                    exclude(name: "**/cron/**")
-                    exclude(name: "**/crontabs")
-                    
-                    // Keep documentation and other files that might be needed
-                    // exclude(name: "**/man/**")    - Keep man pages
-                    // exclude(name: "**/doc/**")    - Keep docs  
-                    // exclude(name: "**/locale/**") - Keep locales
+                    // Include only absolutely essential Alpine components for mobile
+                    include(name: "bin/**")
+                    include(name: "sbin/apk")  // Only APK package manager
+                    include(name: "usr/bin/**")
+                    include(name: "usr/sbin/apk*")  // APK related tools
+                    include(name: "lib/ld-musl-*.so*")  // Essential loader
+                    include(name: "lib/libc.musl-*.so*")  // Essential libc
+                    include(name: "usr/lib/libcrypto.so*")  // For APK
+                    include(name: "usr/lib/libssl.so*")     // For APK
+                    include(name: "usr/lib/libz.so*")       // For APK
+                    include(name: "etc/passwd")
+                    include(name: "etc/group")
+                    include(name: "etc/hosts")
+                    include(name: "etc/apk/**")
+                    include(name: "etc/ssl/certs/ca-certificates.crt")  // Essential for APK
+                    include(name: "var/cache/apk/**")
+                    include(name: "usr/share/apk/**")
                 }
             }
             
