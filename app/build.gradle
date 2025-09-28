@@ -351,9 +351,9 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
         // Remove existing bin files that might have permission issues
         def binDir = new File(tempDir, "bin")
         if (binDir.exists()) {
-            binDir.listFiles()?.each { file ->
-                if (file.isFile()) {
-                    file.delete()
+            binDir.listFiles()?.each { binFile ->
+                if (binFile.isFile()) {
+                    binFile.delete()
                 }
             }
         }
