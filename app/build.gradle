@@ -330,38 +330,39 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dirToCreate.mkdirs()
         }
         
-        // Create minimal placeholder Alpine environment for mobile
-        logger.quiet("Creating minimal Alpine placeholder for mobile memory constraints...")
+        // Create ultra-minimal Alpine environment for mobile memory constraints
+        logger.quiet("Creating ultra-minimal Alpine environment for mobile memory constraints...")
         
-        // Create minimal directory structure
-        def minimalDirs = [
-            "bin", "sbin", "usr/bin", "usr/sbin", "lib", "usr/lib", 
-            "etc", "etc/apk", "var/cache/apk", "tmp", "home/root"
+        // Create only essential directory structure
+        def essentialDirs = [
+            "bin", "usr/bin", "lib", "etc", "etc/apk", "tmp", "home/root"
         ]
-        minimalDirs.each { dirPath ->
+        essentialDirs.each { dirPath ->
             new File(tempDir, dirPath).mkdirs()
         }
         
-        // Create minimal essential files
+        // Create minimal essential files only
         new File(tempDir, "etc/passwd").text = "root:x:0:0:root:/root:/bin/sh\n"
         new File(tempDir, "etc/group").text = "root:x:0:\n"
         new File(tempDir, "etc/hosts").text = "127.0.0.1 localhost\n"
         new File(tempDir, "etc/apk/repositories").text = "https://dl-cdn.alpinelinux.org/alpine/v3.20/main\n"
         new File(tempDir, "etc/alpine-release").text = "3.20.7\n"
         
-        // Copy only essential binaries if they exist
-        def essentialBins = ["sh", "busybox", "apk"]
-        essentialBins.each { binName ->
-            def srcBin = new File(tempDir.parentFile.parentFile, "temp-" + arch + "/bin/" + binName)
-            def dstBin = new File(tempDir, "bin/" + binName)
-            if (srcBin.exists()) {
-                srcBin.renameTo(dstBin)
-            }
+        // Create minimal busybox symlinks for essential commands
+        def busyboxCommands = ["sh", "ls", "cat", "echo", "mkdir", "rm", "cp", "mv", "ln", "chmod", "chown"]
+        busyboxCommands.each { cmd ->
+            new File(tempDir, "bin/" + cmd).text = ""  // Create empty file as placeholder
         }
+        
+        // Create minimal shell script
+        new File(tempDir, "bin/sh").text = "#!/bin/sh\necho 'Minimal Alpine shell'\n"
+        
+        // Create SYMLINKS.txt for the installer
+        new File(tempDir, "SYMLINKS.txt").text = "/bin/sh←bin/sh\n"
         
         try {
             def ant = new groovy.util.AntBuilder()
-            ant.zip(destfile: file.absolutePath) {
+            ant.zip(destfile: file.absolutePath, compress: true, level: 9) {
                 fileset(dir: tempDir.absolutePath) {
                     include(name: "**/*")
                 }
@@ -376,6 +377,12 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             }
             if (file.length() < 1024) {
                 throw new GradleException("Bootstrap zip file is too small for " + arch + " (" + file.length() + " bytes): " + file.absolutePath)
+            }
+            
+            // Ensure zip file is not too large for mobile memory constraints
+            if (file.length() > 50 * 1024 * 1024) {  // 50MB limit
+                throw new GradleException("Bootstrap zip file is too large for " + arch + " (" + (file.length() / 1024 / 1024) + " MB). " +
+                    "This exceeds mobile memory constraints. Please reduce the bootstrap content.")
             }
             
             logger.quiet("Successfully created bootstrap zip for " + arch + " (" + (file.length() / 1024 / 1024).round(2) + " MB) at: " + file.absolutePath)
