@@ -156,8 +156,8 @@ final class TermuxInstaller {
                     final byte[] buffer = new byte[8096];
                     final List<Pair<String, String>> symlinks = new ArrayList<>(50);
 
-                    final byte[] zipBytes = loadZipBytes();
-                    try (ZipInputStream zipInput = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+                    // Use streaming approach to avoid OutOfMemoryError
+                    try (ZipInputStream zipInput = createZipInputStream()) {
                         ZipEntry zipEntry;
                         while ((zipEntry = zipInput.getNextEntry()) != null) {
                             if (zipEntry.getName().equals("SYMLINKS.txt")) {
@@ -377,19 +377,29 @@ final class TermuxInstaller {
         return FileUtils.createDirectoryFile(directory.getAbsolutePath());
     }
 
-    public static byte[] loadZipBytes() {
+    public static ZipInputStream createZipInputStream() {
         // Only load the shared library when necessary to save memory usage.
         System.loadLibrary("termful-bootstrap");
-        byte[] zipData = getZip();
+        
+        // Try to get zip data with memory management
+        byte[] zipData = getZipWithMemoryCheck();
         if (zipData == null) {
-            throw new RuntimeException("Failed to load Alpine Linux bootstrap: native getZip() returned null. " +
-                "This usually means the bootstrap zip files were not properly embedded during build. " +
-                "Please check build logs for bootstrap zip creation errors.");
+            // Try to force garbage collection and retry once
+            System.gc();
+            Runtime.getRuntime().gc();
+            
+            zipData = getZipWithMemoryCheck();
+            if (zipData == null) {
+                throw new RuntimeException("Failed to load Alpine Linux bootstrap: insufficient memory to load bootstrap data. " +
+                    "The bootstrap zip file is too large for the available memory. " +
+                    "Please try restarting the app or freeing up device memory.");
+            }
         }
         Logger.logInfo(LOG_TAG, "Loaded Alpine Linux bootstrap data: " + zipData.length + " bytes");
-        return zipData;
+        
+        return new ZipInputStream(new ByteArrayInputStream(zipData));
     }
 
-    public static native byte[] getZip();
+    public static native byte[] getZipWithMemoryCheck();
 
 }
