@@ -2,10 +2,6 @@ name: Manual Distribution Selector Build
 
 on:
   workflow_dispatch:  # Manual trigger only
-  push:
-    branches: [ feature/manual-distro-selector ]
-  pull_request:
-    branches: [ feature/manual-distro-selector ]
 
 jobs:
   manual-distro-build:
@@ -94,9 +90,6 @@ jobs:
         # Remove any existing build outputs
         rm -rf app/build termful-shared/build terminal-emulator/build terminal-view/build
         rm -rf .gradle/build-cache
-
-    - name: Download minimal bootstraps (ultra-minimal approach)
-      run: ./gradlew downloadBootstraps --info
 
     - name: Monitor disk space before build
       run: |
