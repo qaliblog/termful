@@ -381,6 +381,20 @@ final class TermuxInstaller {
         // Only load the shared library when necessary to save memory usage.
         System.loadLibrary("termful-bootstrap");
         
+        // Get zip data size first to check if it's reasonable
+        long zipSize = getZipSize();
+        if (zipSize <= 0) {
+            throw new RuntimeException("Failed to load Alpine Linux bootstrap: native getZipSize() returned " + zipSize + ". " +
+                "This usually means the bootstrap zip files were not properly embedded during build. " +
+                "Please check build logs for bootstrap zip creation errors.");
+        }
+        
+        // Check if zip size is reasonable (less than 100MB to avoid OOM)
+        if (zipSize > 100 * 1024 * 1024) {
+            throw new RuntimeException("Bootstrap zip file is too large (" + (zipSize / 1024 / 1024) + " MB). " +
+                "This exceeds the memory limit for mobile devices. Please reduce the bootstrap size.");
+        }
+        
         // Try to get zip data with memory management
         byte[] zipData = getZipWithMemoryCheck();
         if (zipData == null) {
@@ -401,5 +415,6 @@ final class TermuxInstaller {
     }
 
     public static native byte[] getZipWithMemoryCheck();
+    public static native long getZipSize();
 
 }

@@ -56,3 +56,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_termful_app_TermuxInstaller_getZipWithMemo
         return NULL;
     }
 }
+
+JNIEXPORT jlong JNICALL Java_com_termful_app_TermuxInstaller_getZipSize(JNIEnv *env, __attribute__((__unused__)) jobject This)
+{
+    // Return the size of the embedded zip blob
+    return (jlong) blob_size;
+}
