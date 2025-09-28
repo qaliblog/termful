@@ -1,0 +1,291 @@
+name: Manual Distribution Selector Build
+
+on:
+  workflow_dispatch:  # Manual trigger only
+  push:
+    branches: [ feature/manual-distro-selector ]
+  pull_request:
+    branches: [ feature/manual-distro-selector ]
+
+jobs:
+  manual-distro-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Free up maximum disk space
+      run: |
+        # Show initial disk usage
+        echo "=== Initial disk usage ==="
+        df -h
+        
+        # Remove unnecessary packages and files
+        sudo apt-get remove -y '^llvm-.*' '^libllvm.*' azure-cli google-cloud-cli
+        sudo apt-get autoremove -y
+        sudo apt-get clean
+        
+        # Remove large development environments (but preserve Java)
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf /usr/local/share/powershell
+        sudo rm -rf /usr/share/swift
+        sudo rm -rf /usr/local/.ghcup
+        # Keep AGENT_TOOLSDIRECTORY for Java - only remove specific subdirs
+        sudo rm -rf /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go /opt/hostedtoolcache/node
+        sudo rm -rf /opt/hostedtoolcache/Python /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby
+        
+        # Remove Android SDK documentation and sources
+        sudo rm -rf /usr/local/lib/android/sdk/sources
+        sudo rm -rf /usr/local/lib/android/sdk/docs
+        sudo rm -rf /usr/local/lib/android/sdk/extras
+        
+        # Clear Docker and system caches
+        docker system prune -af
+        sudo rm -rf ~/.gradle/caches ~/.cache
+        
+        # Show final disk usage
+        echo "=== Disk usage after cleanup ==="
+        df -h
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Verify Java setup
+      run: |
+        echo "=== Java Environment ==="
+        echo "JAVA_HOME: $JAVA_HOME"
+        java -version
+        javac -version
+        which java
+        which javac
+
+    - name: Setup Android SDK
+      run: |
+        # Clear conflicting environment variables
+        unset ANDROID_SDK_ROOT
+        export ANDROID_SDK_ROOT=""
+        echo "ANDROID_SDK_ROOT=" >> $GITHUB_ENV
+        
+        # Use existing Android SDK
+        export ANDROID_HOME=/usr/local/lib/android/sdk
+        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+        echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        
+        # Create local.properties
+        echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+        
+        # Install only essential components
+        yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+        /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;22.1.7171670" 2>/dev/null || true
+
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    - name: Clean project thoroughly
+      run: |
+        ./gradlew clean
+        # Remove any existing build outputs
+        rm -rf app/build termful-shared/build terminal-emulator/build terminal-view/build
+        rm -rf .gradle/build-cache
+
+    - name: Download minimal bootstraps (ultra-minimal approach)
+      run: ./gradlew downloadBootstraps --info
+
+    - name: Monitor disk space before build
+      run: |
+        echo "=== Disk space before build ==="
+        df -h
+        echo "=== Gradle cache size ==="
+        du -sh .gradle/ 2>/dev/null || echo "No .gradle directory"
+
+    - name: Build debug APK (for testing)
+      run: |
+        # Build debug version for testing the new feature
+        ./gradlew assembleDebug --stacktrace --no-daemon --max-workers=2
+      env:
+        GRADLE_OPTS: "-Xmx2048m -Dfile.encoding=UTF-8"
+
+    - name: Build release APK
+      run: |
+        # Build release version
+        ./gradlew assembleRelease --stacktrace --no-daemon --max-workers=2
+      env:
+        GRADLE_OPTS: "-Xmx2048m -Dfile.encoding=UTF-8"
+
+    - name: Verify APK creation
+      run: |
+        echo "=== APK files created ==="
+        find app/build/outputs/apk -name "*.apk" -ls 2>/dev/null || echo "No APKs found"
+        
+        echo "=== Final disk usage ==="
+        df -h
+
+    - name: Organize APKs by architecture
+      run: |
+        mkdir -p apk-outputs/{arm64-v8a,armeabi-v7a,x86_64,x86,universal}
+        
+        # Find and organize APK files by architecture
+        find app/build/outputs/apk -name "*.apk" | while read apk; do
+          filename=$(basename "$apk")
+          echo "Processing: $filename"
+          
+          if [[ "$filename" == *"arm64-v8a"* ]]; then
+            cp "$apk" apk-outputs/arm64-v8a/
+            echo "✅ ARM64 APK: $filename"
+          elif [[ "$filename" == *"armeabi-v7a"* ]]; then
+            cp "$apk" apk-outputs/armeabi-v7a/
+            echo "✅ ARM32 APK: $filename"  
+          elif [[ "$filename" == *"x86_64"* ]]; then
+            cp "$apk" apk-outputs/x86_64/
+            echo "✅ x86_64 APK: $filename"
+          elif [[ "$filename" == *"x86"* ]] && [[ "$filename" != *"x86_64"* ]]; then
+            cp "$apk" apk-outputs/x86/
+            echo "✅ x86 APK: $filename"
+          else
+            cp "$apk" apk-outputs/universal/
+            echo "✅ Universal APK: $filename"
+          fi
+        done
+        
+        # Create architecture-specific build info
+        for arch in arm64-v8a armeabi-v7a x86_64 x86 universal; do
+          if ls apk-outputs/$arch/*.apk 1> /dev/null 2>&1; then
+            echo "# Termful $arch Release - Manual Distribution Selector" > apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Architecture**: $arch" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Date**: $(date)" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Commit**: ${{ github.sha }}" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Feature**: Manual Distribution Selector" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Bootstrap**: Ultra-minimal (~1MB)" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "- **Package**: com.termful" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "" >> apk-outputs/$arch/BUILD_INFO.md
+            echo "## APK Files:" >> apk-outputs/$arch/BUILD_INFO.md
+            ls -lh apk-outputs/$arch/*.apk >> apk-outputs/$arch/BUILD_INFO.md
+            
+            # Create SHA256 checksum
+            cd apk-outputs/$arch
+            sha256sum *.apk > SHA256SUMS.txt
+            cd - > /dev/null
+          fi
+        done
+
+    - name: Upload ARM64 APK (Most Common)
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/arm64-v8a/*.apk') != ''
+      with:
+        name: termful-manual-distro-arm64-v8a
+        path: apk-outputs/arm64-v8a/
+        retention-days: 90
+
+    - name: Upload ARM32 APK 
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/armeabi-v7a/*.apk') != ''
+      with:
+        name: termful-manual-distro-armeabi-v7a
+        path: apk-outputs/armeabi-v7a/
+        retention-days: 90
+
+    - name: Upload x86_64 APK
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/x86_64/*.apk') != ''
+      with:
+        name: termful-manual-distro-x86_64
+        path: apk-outputs/x86_64/
+        retention-days: 90
+
+    - name: Upload x86 APK
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/x86/*.apk') != ''
+      with:
+        name: termful-manual-distro-x86
+        path: apk-outputs/x86/
+        retention-days: 90
+
+    - name: Upload Universal APK (if exists)
+      uses: actions/upload-artifact@v4
+      if: hashFiles('apk-outputs/universal/*.apk') != ''
+      with:
+        name: termful-manual-distro-universal
+        path: apk-outputs/universal/
+        retention-days: 30
+
+    - name: Build success summary
+      if: success()
+      run: |
+        echo "🎉 SUCCESS! Termful APKs built with Manual Distribution Selector!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 🆕 New Feature: Manual Distribution Selector" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🎯 What's New:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Distribution Choice**: Select from Alpine, Debian, Ubuntu, Arch, or Fedora" >> $GITHUB_STEP_SUMMARY
+        echo "- **Manual Download**: Download distributions from official sources" >> $GITHUB_STEP_SUMMARY
+        echo "- **File Picker**: Select downloaded rootfs files (.tar.gz, .zip)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Skip Option**: Use ultra-minimal bootstrap (~1MB) instead" >> $GITHUB_STEP_SUMMARY
+        echo "- **User Control**: No automatic downloads - you choose what to install" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 📱 Download Your Architecture" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Check which APKs were created and show download links
+        if [ -f "apk-outputs/arm64-v8a/"*.apk ]; then
+          echo "### 🔥 ARM64 (arm64-v8a) - Most Modern Devices" >> $GITHUB_STEP_SUMMARY
+          echo "**Download**: [termful-manual-distro-arm64-v8a](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Devices**: Recent Android phones, tablets (2017+)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "apk-outputs/armeabi-v7a/"*.apk ]; then
+          echo "### 📱 ARM32 (armeabi-v7a) - Older Devices" >> $GITHUB_STEP_SUMMARY  
+          echo "**Download**: [termful-manual-distro-armeabi-v7a](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Devices**: Older Android phones, tablets (2012-2017)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "apk-outputs/x86_64/"*.apk ]; then
+          echo "### 💻 x86_64 - Emulators & Intel Devices" >> $GITHUB_STEP_SUMMARY
+          echo "**Download**: [termful-manual-distro-x86_64](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY  
+          echo "**Devices**: Android emulators, Intel-based tablets" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "apk-outputs/x86/"*.apk ]; then
+          echo "### 🖥️ x86 - Legacy Intel Devices" >> $GITHUB_STEP_SUMMARY
+          echo "**Download**: [termful-manual-distro-x86](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "**Devices**: Older Intel-based Android devices" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "## 🐧 Supported Distributions" >> $GITHUB_STEP_SUMMARY
+        echo "- **Alpine Linux**: Lightweight, security-oriented (~5MB)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Debian**: Stable, universal distribution (~50MB)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Ubuntu**: Popular with extensive software support (~100MB)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Arch Linux**: Lightweight and flexible (~200MB)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Fedora**: Cutting-edge distribution (~500MB)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 🎯 How to Use" >> $GITHUB_STEP_SUMMARY
+        echo "1. **Install Termful** from the APK above" >> $GITHUB_STEP_SUMMARY
+        echo "2. **First Launch**: Choose your preferred Linux distribution" >> $GITHUB_STEP_SUMMARY
+        echo "3. **Download**: Click to open browser and download the distribution" >> $GITHUB_STEP_SUMMARY
+        echo "4. **Select File**: Use file picker to select downloaded rootfs" >> $GITHUB_STEP_SUMMARY
+        echo "5. **Install**: Termful will install your chosen distribution" >> $GITHUB_STEP_SUMMARY
+        echo "6. **Skip Option**: Or skip to use ultra-minimal bootstrap" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "## 🚀 Benefits" >> $GITHUB_STEP_SUMMARY
+        echo "- **User Choice**: Pick your preferred Linux distribution" >> $GITHUB_STEP_SUMMARY
+        echo "- **Manual Control**: No automatic downloads" >> $GITHUB_STEP_SUMMARY
+        echo "- **Size Flexibility**: From tiny Alpine to full Fedora" >> $GITHUB_STEP_SUMMARY
+        echo "- **Always Works**: Fallback to minimal bootstrap" >> $GITHUB_STEP_SUMMARY
+        echo "- **Professional UX**: Clean, intuitive interface" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "🎉 **Manual Distribution Selector Feature Complete!**" >> $GITHUB_STEP_SUMMARY
