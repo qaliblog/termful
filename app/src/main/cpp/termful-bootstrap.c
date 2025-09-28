@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <string.h>
 
 extern jbyte blob[];
 extern int blob_size;
@@ -23,7 +24,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_termful_app_TermuxInstaller_getZip(JNIEnv 
     return ret;
 }
 
-JNIEXPORT jlong JNICALL Java_com_termful_app_TermuxInstaller_getZipSize(JNIEnv *env, __attribute__((__unused__)) jobject This)
+JNIEXPORT jlong JNICALL Java_com_termful_app_TermuxInstaller_getZipSize(__attribute__((__unused__)) JNIEnv *env, __attribute__((__unused__)) jobject This)
 {
     // Return the size of the embedded zip blob
     return (jlong) blob_size;
