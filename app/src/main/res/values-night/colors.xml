@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Termux colors -->
+    <color name="termux_background_color">#FF121212</color>
+    <color name="termux_primary_text_color">#FFFFFFFF</color>
+    <color name="termux_secondary_text_color">#FFCCCCCC</color>
+    <color name="termux_divider_color">#FF333333</color>
+    <color name="termux_button_color">#FF444444</color>
+    <color name="termux_button_text_color">#FFFFFFFF</color>
+</resources>
