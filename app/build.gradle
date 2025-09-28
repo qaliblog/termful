@@ -324,28 +324,47 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dirToCreate.mkdirs()
         }
         
-        // Create zip with minimal Alpine content for mobile memory constraints
+        // Create zip with balanced Alpine content - functional but mobile-optimized
         try {
             def ant = new groovy.util.AntBuilder()
             ant.zip(destfile: file.absolutePath) {
                 fileset(dir: tempDir.absolutePath) {
-                    // Include only absolutely essential Alpine components for mobile
+                    // Include essential Alpine components
                     include(name: "bin/**")
-                    include(name: "sbin/apk")  // Only APK package manager
+                    include(name: "sbin/**")  
                     include(name: "usr/bin/**")
-                    include(name: "usr/sbin/apk*")  // APK related tools
-                    include(name: "lib/ld-musl-*.so*")  // Essential loader
-                    include(name: "lib/libc.musl-*.so*")  // Essential libc
-                    include(name: "usr/lib/libcrypto.so*")  // For APK
-                    include(name: "usr/lib/libssl.so*")     // For APK
-                    include(name: "usr/lib/libz.so*")       // For APK
-                    include(name: "etc/passwd")
-                    include(name: "etc/group")
-                    include(name: "etc/hosts")
-                    include(name: "etc/apk/**")
-                    include(name: "etc/ssl/certs/ca-certificates.crt")  // Essential for APK
+                    include(name: "usr/sbin/**")
+                    include(name: "lib/**")
+                    include(name: "usr/lib/**")
+                    include(name: "etc/**")
                     include(name: "var/cache/apk/**")
                     include(name: "usr/share/apk/**")
+                    
+                    // Exclude only the most problematic content
+                    exclude(name: "**/systemd/**")
+                    exclude(name: "**/dev/**")
+                    exclude(name: "**/proc/**") 
+                    exclude(name: "**/sys/**")
+                    exclude(name: "**/run/**")
+                    exclude(name: "**/udev/**")
+                    exclude(name: "**/*device*")
+                    exclude(name: "**/*x2f*")
+                    exclude(name: "**/*x2d*")
+                    exclude(name: "**/*azure*")
+                    exclude(name: "**/*resource*")
+                    exclude(name: "**/links/**")
+                    exclude(name: "**/spool/**")
+                    exclude(name: "**/cron/**")
+                    exclude(name: "**/crontabs")
+                    
+                    // Exclude large documentation to save space
+                    exclude(name: "**/man/**")
+                    exclude(name: "**/doc/**")
+                    exclude(name: "**/share/man/**")
+                    exclude(name: "**/share/doc/**")
+                    exclude(name: "**/share/info/**")
+                    exclude(name: "**/locale/**")
+                    exclude(name: "**/zoneinfo/**")
                 }
             }
             
