@@ -324,23 +324,34 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
             dirToCreate.mkdirs()
         }
         
-        // Create zip with balanced Alpine content - functional but mobile-optimized
+        // Create ultra-minimal Alpine content for mobile memory constraints  
         try {
             def ant = new groovy.util.AntBuilder()
             ant.zip(destfile: file.absolutePath) {
                 fileset(dir: tempDir.absolutePath) {
-                    // Include essential Alpine components
-                    include(name: "bin/**")
-                    include(name: "sbin/**")  
-                    include(name: "usr/bin/**")
-                    include(name: "usr/sbin/**")
-                    include(name: "lib/**")
-                    include(name: "usr/lib/**")
-                    include(name: "etc/**")
-                    include(name: "var/cache/apk/**")
-                    include(name: "usr/share/apk/**")
+                    // Start with everything, then aggressively exclude
+                    include(name: "**/*")
                     
-                    // Exclude only the most problematic content
+                    // Exclude large directories that cause memory issues
+                    exclude(name: "usr/share/**")  // Large shared data (except APK)
+                    exclude(name: "usr/lib/python*/**")  // Python libraries
+                    exclude(name: "usr/lib/perl*/**")    // Perl libraries  
+                    exclude(name: "usr/lib/ruby*/**")    // Ruby libraries
+                    exclude(name: "usr/lib/node*/**")    // Node libraries
+                    exclude(name: "usr/lib/gcc/**")      // GCC toolchain
+                    exclude(name: "usr/include/**")      // Header files
+                    exclude(name: "lib/modules/**")      // Kernel modules
+                    exclude(name: "lib/firmware/**")     // Firmware files
+                    
+                    // Exclude documentation and localization  
+                    exclude(name: "**/man/**")
+                    exclude(name: "**/doc/**")
+                    exclude(name: "**/info/**")
+                    exclude(name: "**/locale/**")
+                    exclude(name: "**/zoneinfo/**")
+                    exclude(name: "**/terminfo/**")
+                    
+                    // Exclude problematic system files
                     exclude(name: "**/systemd/**")
                     exclude(name: "**/dev/**")
                     exclude(name: "**/proc/**") 
@@ -356,15 +367,15 @@ def downloadAlpineRootfs(String arch, String alpineArch, String alpineVersion) {
                     exclude(name: "**/spool/**")
                     exclude(name: "**/cron/**")
                     exclude(name: "**/crontabs")
-                    
-                    // Exclude large documentation to save space
-                    exclude(name: "**/man/**")
-                    exclude(name: "**/doc/**")
-                    exclude(name: "**/share/man/**")
-                    exclude(name: "**/share/doc/**")
-                    exclude(name: "**/share/info/**")
-                    exclude(name: "**/locale/**")
-                    exclude(name: "**/zoneinfo/**")
+                }
+            }
+            
+            // Re-add essential APK files that might have been excluded
+            ant.zip(destfile: file.absolutePath, update: true) {
+                fileset(dir: tempDir.absolutePath) {
+                    include(name: "etc/apk/**")
+                    include(name: "var/cache/apk/**") 
+                    include(name: "usr/share/apk/**")
                 }
             }
             
