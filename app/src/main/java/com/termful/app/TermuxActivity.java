@@ -784,8 +784,20 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         Logger.logVerbose(LOG_TAG, "onActivityResult: requestCode: " + requestCode + ", resultCode: "  + resultCode + ", data: "  + IntentUtils.getIntentString(data));
+        
         if (requestCode == PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION) {
             requestStoragePermission(true);
+        } else if (requestCode == 2001 && resultCode == RESULT_OK && data != null) {
+            String distribution = data.getStringExtra(DistributionSelectorActivity.EXTRA_DISTRIBUTION);
+            String downloadUrl = data.getStringExtra(DistributionSelectorActivity.EXTRA_DOWNLOAD_URL);
+            
+            Logger.logInfo(LOG_TAG, "Distribution selected: " + distribution);
+            
+            // Proceed with bootstrap installation
+            proceedWithBootstrapInstallation(distribution, downloadUrl);
+        } else if (requestCode == 2001) {
+            // User cancelled, proceed with minimal bootstrap
+            proceedWithBootstrapInstallation("minimal", null);
         }
     }
 
@@ -1010,23 +1022,6 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         startActivityForResult(intent, 2001);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        
-        if (requestCode == 2001 && resultCode == RESULT_OK && data != null) {
-            String distribution = data.getStringExtra(DistributionSelectorActivity.EXTRA_DISTRIBUTION);
-            String downloadUrl = data.getStringExtra(DistributionSelectorActivity.EXTRA_DOWNLOAD_URL);
-            
-            Logger.logInfo(LOG_TAG, "Distribution selected: " + distribution);
-            
-            // Proceed with bootstrap installation
-            proceedWithBootstrapInstallation(distribution, downloadUrl);
-        } else if (requestCode == 2001) {
-            // User cancelled, proceed with minimal bootstrap
-            proceedWithBootstrapInstallation("minimal", null);
-        }
-    }
 
     private void proceedWithBootstrapInstallation(String distribution, String downloadUrl) {
         TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
