@@ -65,7 +65,7 @@ jobs:
         fi
 
     - name: Cache Gradle packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.gradle/caches
@@ -75,7 +75,7 @@ jobs:
           ${{ runner.os }}-gradle-
 
     - name: Cache Alpine rootfs downloads
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           app/src/main/cpp/alpine-minirootfs-*.tar.gz
