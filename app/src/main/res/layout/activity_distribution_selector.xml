@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@color/termux_background_color">
+    android:background="@android:color/black">
 
     <TextView
         android:layout_width="match_parent"
@@ -12,7 +12,7 @@
         android:text="Choose Linux Distribution"
         android:textSize="24sp"
         android:textStyle="bold"
-        android:textColor="@color/termux_primary_text_color"
+        android:textColor="@android:color/white"
         android:gravity="center"
         android:layout_marginBottom="16dp" />
 
@@ -21,7 +21,7 @@
         android:layout_height="wrap_content"
         android:text="Select a Linux distribution to download and install, or skip to use the minimal bootstrap."
         android:textSize="14sp"
-        android:textColor="@color/termux_secondary_text_color"
+        android:textColor="@android:color/darker_gray"
         android:layout_marginBottom="24dp" />
 
     <ListView
@@ -29,8 +29,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="@color/termux_background_color"
-        android:divider="@color/termux_divider_color"
+        android:background="@android:color/black"
+        android:divider="@android:color/darker_gray"
         android:dividerHeight="1dp"
         android:choiceMode="singleChoice" />
 
@@ -47,8 +47,8 @@
             android:layout_weight="1"
             android:text="Skip (Minimal)"
             android:layout_marginEnd="8dp"
-            android:background="@color/termux_button_color"
-            android:textColor="@color/termux_button_text_color" />
+            android:background="@android:color/darker_gray"
+            android:textColor="@android:color/white" />
 
         <Button
             android:id="@+id/download_button"
@@ -57,8 +57,8 @@
             android:layout_weight="1"
             android:text="Download"
             android:layout_marginStart="8dp"
-            android:background="@color/termux_button_color"
-            android:textColor="@color/termux_button_text_color"
+            android:background="@android:color/darker_gray"
+            android:textColor="@android:color/white"
             android:enabled="false" />
 
     </LinearLayout>
