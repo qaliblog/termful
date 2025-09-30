@@ -28,6 +28,7 @@ import android.widget.Toast;
 
 import com.termful.R;
 import com.termful.app.api.file.FileReceiverActivity;
+import com.termful.app.utils.TerminalLogger;
 import com.termful.app.terminal.TermuxActivityRootView;
 import com.termful.app.terminal.TermuxTerminalSessionActivityClient;
 import com.termful.app.terminal.io.TermuxTerminalExtraKeys;
@@ -1022,19 +1023,41 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
 
     private void proceedWithBootstrapInstallation(String distribution, String downloadUrl) {
-        TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
-            if (mTermuxService == null) return; // Activity might have been destroyed.
-            try {
-                boolean launchFailsafe = false;
-                Intent intent = getIntent();
-                if (intent != null && intent.getExtras() != null) {
-                    launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
+        TerminalLogger.logInfo(this, LOG_TAG, "Proceeding with bootstrap installation for distribution: " + distribution);
+        TerminalLogger.logInfo(this, LOG_TAG, "Download URL: " + downloadUrl);
+        
+        // Check if this is a custom distribution (file URI) or a standard distribution
+        if (downloadUrl != null && downloadUrl.startsWith("content://")) {
+            TerminalLogger.logInfo(this, LOG_TAG, "Custom distribution file selected, processing file: " + downloadUrl);
+            TermuxInstaller.setupCustomBootstrap(TermuxActivity.this, downloadUrl, () -> {
+                if (mTermuxService == null) return; // Activity might have been destroyed.
+                try {
+                    boolean launchFailsafe = false;
+                    Intent intent = getIntent();
+                    if (intent != null && intent.getExtras() != null) {
+                        launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
+                    }
+                    mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
+                } catch (WindowManager.BadTokenException e) {
+                    // Activity finished - ignore.
                 }
-                mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
-            } catch (WindowManager.BadTokenException e) {
-                // Activity finished - ignore.
-            }
-        });
+            });
+        } else {
+            TerminalLogger.logInfo(this, LOG_TAG, "Standard distribution selected, using default bootstrap process");
+            TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
+                if (mTermuxService == null) return; // Activity might have been destroyed.
+                try {
+                    boolean launchFailsafe = false;
+                    Intent intent = getIntent();
+                    if (intent != null && intent.getExtras() != null) {
+                        launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
+                    }
+                    mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
+                } catch (WindowManager.BadTokenException e) {
+                    // Activity finished - ignore.
+                }
+            });
+        }
     }
 
 }
