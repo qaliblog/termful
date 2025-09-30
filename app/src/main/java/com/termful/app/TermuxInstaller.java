@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Environment;
 import android.system.Os;
@@ -11,6 +12,7 @@ import android.util.Pair;
 import android.view.WindowManager;
 
 import com.termful.R;
+import com.termful.app.activities.DistributionSelectorActivity;
 import com.termful.shared.file.FileUtils;
 import com.termful.shared.termux.crash.TermuxCrashUtils;
 import com.termful.shared.termux.file.TermuxFileUtils;
@@ -59,6 +61,32 @@ import static com.termful.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DI
  * (5.2) For every other zip entry, extract it into $STAGING_PREFIX and set execute permissions if necessary.
  */
 public final class TermuxInstaller {
+    
+    private static class NoBootstrapAvailableException extends RuntimeException {
+        public NoBootstrapAvailableException(String message) {
+            super(message);
+        }
+    }
+    
+    private static void showDistributionSelectorDialog(final Activity activity, final Runnable whenDone) {
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("Select Linux Distribution")
+                   .setMessage("No bootstrap files are available. Please select a Linux distribution to install.")
+                   .setPositiveButton("Select Distribution", (dialog, which) -> {
+                       // Start the distribution selector activity
+                       Intent intent = new Intent(activity, DistributionSelectorActivity.class);
+                       activity.startActivityForResult(intent, 2001);
+                   })
+                   .setNegativeButton("Exit", (dialog, which) -> {
+                       activity.finish();
+                   })
+                   .setCancelable(false)
+                   .show();
+        } catch (WindowManager.BadTokenException e) {
+            // Activity already dismissed - ignore.
+        }
+    }
 
     private static final String LOG_TAG = "TermuxInstaller";
 
@@ -158,7 +186,8 @@ public final class TermuxInstaller {
                     final List<Pair<String, String>> symlinks = new ArrayList<>(50);
 
                     // Use streaming extraction to avoid loading entire zip into memory
-                    try (ZipInputStream zipInput = new ZipInputStream(new BootstrapZipInputStream())) {
+                    try {
+                        try (ZipInputStream zipInput = new ZipInputStream(new BootstrapZipInputStream())) {
                         ZipEntry zipEntry;
                         while ((zipEntry = zipInput.getNextEntry()) != null) {
                             if (zipEntry.getName().equals("SYMLINKS.txt")) {
@@ -205,6 +234,10 @@ public final class TermuxInstaller {
                                 }
                             }
                         }
+                    } catch (NoBootstrapAvailableException e) {
+                        // No bootstrap files available - redirect to distribution selector
+                        showDistributionSelectorDialog(activity, whenDone);
+                        return;
                     }
 
                     if (symlinks.isEmpty())
@@ -401,9 +434,8 @@ public final class TermuxInstaller {
             
             totalSize = getZipSize();
             if (totalSize <= 0) {
-                throw new RuntimeException("Failed to load Alpine Linux bootstrap: native getZipSize() returned " + totalSize + ". " +
-                    "This usually means the bootstrap zip files were not properly embedded during build. " +
-                    "Please check build logs for bootstrap zip creation errors.");
+                // No bootstrap files available - this is expected for Manual Distribution Selector
+                throw new NoBootstrapAvailableException("No bootstrap files available - user must select their own distribution");
             }
             
             // Check if zip size is reasonable (less than 500MB to avoid OOM)
@@ -411,8 +443,6 @@ public final class TermuxInstaller {
                 throw new RuntimeException("Bootstrap zip file is too large (" + (totalSize / 1024 / 1024) + " MB). " +
                     "This exceeds the memory limit for mobile devices. Please reduce the bootstrap size.");
             }
-            
-            Logger.logInfo(LOG_TAG, "Streaming Alpine Linux bootstrap data: " + totalSize + " bytes");
         }
         
         @Override
