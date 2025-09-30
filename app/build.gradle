@@ -298,20 +298,15 @@ clean {
 
 task downloadBootstraps() {
     doLast {
-        logger.quiet("Creating minimal bootstraps for Manual Distribution Selector...")
+        logger.quiet("Manual Distribution Selector - No bootstrap creation needed")
+        logger.quiet("Users will select their own Linux distributions")
         
-        // Force clean bootstrap zips to ensure minimal content
+        // Clean any existing bootstrap files since we don't use them
         def tree = fileTree(new File(projectDir, 'src/main/cpp'))
         tree.include 'bootstrap-*.zip'
         tree.each { it.delete() }
         
-        // Create minimal bootstraps for all architectures - no external downloads
-        createMinimalBootstrap("aarch64")
-        createMinimalBootstrap("arm")
-        createMinimalBootstrap("i686")
-        createMinimalBootstrap("x86_64")
-        
-        logger.quiet("✅ Minimal bootstraps created successfully for Manual Distribution Selector!")
+        logger.quiet("✅ Manual Distribution Selector ready - no minimal bootstrap!")
     }
 }
 

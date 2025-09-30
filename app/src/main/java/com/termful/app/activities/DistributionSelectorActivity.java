@@ -29,7 +29,6 @@ public class DistributionSelectorActivity extends Activity {
     
     private ListView distributionListView;
     private Button downloadButton;
-    private Button skipButton;
     private String selectedDistribution = null;
     private String selectedDownloadUrl = null;
     
@@ -46,7 +45,6 @@ public class DistributionSelectorActivity extends Activity {
     private void initializeViews() {
         distributionListView = findViewById(R.id.distribution_list);
         downloadButton = findViewById(R.id.download_button);
-        skipButton = findViewById(R.id.skip_button);
         
         // Disable download button initially
         downloadButton.setEnabled(false);
@@ -64,6 +62,8 @@ public class DistributionSelectorActivity extends Activity {
                 
                 TextView textView = (TextView) view;
                 textView.setText(distro.getName() + "\n" + distro.getDescription());
+                textView.setTextColor(getContext().getResources().getColor(android.R.color.white));
+                textView.setTextSize(16);
                 
                 return view;
             }
@@ -87,11 +87,6 @@ public class DistributionSelectorActivity extends Activity {
             if (selectedDistribution != null && selectedDownloadUrl != null) {
                 showDownloadConfirmation();
             }
-        });
-        
-        skipButton.setOnClickListener(v -> {
-            // Skip distribution download and proceed with minimal bootstrap
-            proceedWithMinimalBootstrap();
         });
     }
     
@@ -128,9 +123,7 @@ public class DistributionSelectorActivity extends Activity {
                .setPositiveButton("Select File", (dialog, which) -> {
                    openFilePicker();
                })
-               .setNegativeButton("Skip", (dialog, which) -> {
-                   proceedWithMinimalBootstrap();
-               })
+               .setNegativeButton("Cancel", null)
                .show();
     }
     
@@ -179,12 +172,6 @@ public class DistributionSelectorActivity extends Activity {
         finish();
     }
     
-    private void proceedWithMinimalBootstrap() {
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra(EXTRA_DISTRIBUTION, "minimal");
-        setResult(RESULT_OK, resultIntent);
-        finish();
-    }
     
     private List<DistributionInfo> getAvailableDistributions() {
         List<DistributionInfo> distributions = new ArrayList<>();
