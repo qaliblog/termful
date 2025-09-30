@@ -56,7 +56,7 @@ public class DistributionSelectorActivity extends Activity {
         List<DistributionInfo> distributions = getAvailableDistributions();
         
         ArrayAdapter<DistributionInfo> adapter = new ArrayAdapter<DistributionInfo>(this, 
-            android.R.layout.simple_list_item_single_choice, distributions) {
+            android.R.layout.simple_list_item_2, distributions) {
             @Override
             public View getView(int position, View convertView, android.view.ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);
@@ -65,14 +65,7 @@ public class DistributionSelectorActivity extends Activity {
                 TextView textView = (TextView) view.findViewById(android.R.id.text1);
                 textView.setText(distro.getName());
                 
-                // Add subtitle with description
                 TextView subtitle = (TextView) view.findViewById(android.R.id.text2);
-                if (subtitle == null) {
-                    subtitle = new TextView(this.getContext());
-                    subtitle.setTextSize(12);
-                    subtitle.setTextColor(getContext().getResources().getColor(android.R.color.darker_gray));
-                    ((android.widget.LinearLayout) view).addView(subtitle);
-                }
                 subtitle.setText(distro.getDescription());
                 
                 return view;
