@@ -298,7 +298,7 @@ clean {
 
 task downloadBootstraps() {
     doLast {
-        logger.quiet("Manual Distribution Selector - No bootstrap creation needed")
+        logger.quiet("Manual Distribution Selector - No bootstrap files needed")
         logger.quiet("Users will select their own Linux distributions")
         
         // Clean any existing bootstrap files since we don't use them
@@ -306,7 +306,7 @@ task downloadBootstraps() {
         tree.include 'bootstrap-*.zip'
         tree.each { it.delete() }
         
-        logger.quiet("✅ Manual Distribution Selector ready - no minimal bootstrap!")
+        logger.quiet("✅ Manual Distribution Selector ready - no bootstrap files!")
     }
 }
 

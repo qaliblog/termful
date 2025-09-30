@@ -791,17 +791,10 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             String distribution = data.getStringExtra(DistributionSelectorActivity.EXTRA_DISTRIBUTION);
             String downloadUrl = data.getStringExtra(DistributionSelectorActivity.EXTRA_DOWNLOAD_URL);
             
-            Logger.logInfo(LOG_TAG, "=== DISTRIBUTION SELECTOR DEBUG ===");
-            Logger.logInfo(LOG_TAG, "Distribution selected: " + distribution);
-            Logger.logInfo(LOG_TAG, "Download URL: " + downloadUrl);
-            Logger.logInfo(LOG_TAG, "Proceeding with bootstrap installation...");
-            
             // Proceed with bootstrap installation
             proceedWithBootstrapInstallation(distribution, downloadUrl);
         } else if (requestCode == 2001) {
             // User cancelled - exit the app since no minimal bootstrap is allowed
-            Logger.logInfo(LOG_TAG, "=== DISTRIBUTION SELECTOR DEBUG ===");
-            Logger.logInfo(LOG_TAG, "User cancelled distribution selection - exiting app");
             finish();
         }
     }
@@ -1029,23 +1022,14 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
 
     private void proceedWithBootstrapInstallation(String distribution, String downloadUrl) {
-        Logger.logInfo(LOG_TAG, "=== BOOTSTRAP INSTALLATION DEBUG ===");
-        Logger.logInfo(LOG_TAG, "Starting bootstrap installation for: " + distribution);
-        Logger.logInfo(LOG_TAG, "Download URL: " + downloadUrl);
-        
         TermuxInstaller.setupBootstrapIfNeeded(TermuxActivity.this, () -> {
-            Logger.logInfo(LOG_TAG, "Bootstrap installation completed successfully");
-            if (mTermuxService == null) {
-                Logger.logInfo(LOG_TAG, "TermuxService is null - activity might have been destroyed");
-                return; // Activity might have been destroyed.
-            }
+            if (mTermuxService == null) return; // Activity might have been destroyed.
             try {
                 boolean launchFailsafe = false;
                 Intent intent = getIntent();
                 if (intent != null && intent.getExtras() != null) {
                     launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
                 }
-                Logger.logInfo(LOG_TAG, "Launch failsafe: " + launchFailsafe);
                 mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
             } catch (WindowManager.BadTokenException e) {
                 // Activity finished - ignore.

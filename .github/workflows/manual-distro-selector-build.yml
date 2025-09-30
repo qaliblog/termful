@@ -95,7 +95,7 @@ jobs:
         rm -rf app/build termful-shared/build terminal-emulator/build terminal-view/build
         rm -rf .gradle/build-cache
 
-    - name: Create minimal bootstraps (Manual Distribution Selector)
+    - name: Prepare Manual Distribution Selector (No Bootstrap Files)
       run: ./gradlew downloadBootstraps --info
 
     - name: Monitor disk space before build
@@ -277,14 +277,14 @@ jobs:
         echo "3. **Download**: Click to open browser and download the distribution" >> $GITHUB_STEP_SUMMARY
         echo "4. **Select File**: Use file picker to select downloaded rootfs" >> $GITHUB_STEP_SUMMARY
         echo "5. **Install**: Termful will install your chosen distribution" >> $GITHUB_STEP_SUMMARY
-        echo "6. **Skip Option**: Or skip to use minimal bootstrap (~1MB)" >> $GITHUB_STEP_SUMMARY
+        echo "6. **No Fallback**: Must select a distribution to proceed" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
         echo "## 🚀 Benefits" >> $GITHUB_STEP_SUMMARY
         echo "- **User Choice**: Pick your preferred Linux distribution" >> $GITHUB_STEP_SUMMARY
         echo "- **Manual Control**: No automatic downloads" >> $GITHUB_STEP_SUMMARY
         echo "- **Size Flexibility**: From tiny Alpine to full Fedora" >> $GITHUB_STEP_SUMMARY
-        echo "- **Always Works**: Fallback to minimal bootstrap" >> $GITHUB_STEP_SUMMARY
+        echo "- **Clean Installation**: No unnecessary files" >> $GITHUB_STEP_SUMMARY
         echo "- **Professional UX**: Clean, intuitive interface" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         

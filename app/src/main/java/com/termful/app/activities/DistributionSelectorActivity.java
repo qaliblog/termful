@@ -78,7 +78,6 @@ public class DistributionSelectorActivity extends Activity {
             selectedDownloadUrl = selectedDistro.getDownloadUrl();
             downloadButton.setEnabled(true);
             
-            Logger.logInfo(LOG_TAG, "Selected distribution: " + selectedDistribution);
         });
     }
     
@@ -110,7 +109,6 @@ public class DistributionSelectorActivity extends Activity {
             // Show file picker dialog
             showFilePickerDialog();
         } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to open download URL: " + e.getMessage());
             Toast.makeText(this, "Failed to open download URL", Toast.LENGTH_SHORT).show();
         }
     }
@@ -135,7 +133,6 @@ public class DistributionSelectorActivity extends Activity {
         try {
             startActivityForResult(intent, 1001);
         } catch (Exception e) {
-            Logger.logError(LOG_TAG, "Failed to open file picker: " + e.getMessage());
             Toast.makeText(this, "File picker not available", Toast.LENGTH_SHORT).show();
         }
     }
