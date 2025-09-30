@@ -56,17 +56,14 @@ public class DistributionSelectorActivity extends Activity {
         List<DistributionInfo> distributions = getAvailableDistributions();
         
         ArrayAdapter<DistributionInfo> adapter = new ArrayAdapter<DistributionInfo>(this, 
-            android.R.layout.simple_list_item_2, distributions) {
+            android.R.layout.simple_list_item_1, distributions) {
             @Override
             public View getView(int position, View convertView, android.view.ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);
                 DistributionInfo distro = distributions.get(position);
                 
-                TextView textView = (TextView) view.findViewById(android.R.id.text1);
-                textView.setText(distro.getName());
-                
-                TextView subtitle = (TextView) view.findViewById(android.R.id.text2);
-                subtitle.setText(distro.getDescription());
+                TextView textView = (TextView) view;
+                textView.setText(distro.getName() + "\n" + distro.getDescription());
                 
                 return view;
             }
