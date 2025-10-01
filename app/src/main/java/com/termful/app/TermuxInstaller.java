@@ -18,7 +18,6 @@ import com.termful.app.utils.TerminalLogger;
 import com.termful.shared.file.FileUtils;
 import com.termful.shared.termux.crash.TermuxCrashUtils;
 import com.termful.shared.termux.file.TermuxFileUtils;
-import com.termful.shared.interact.MessageDialogUtils;
 import com.termful.shared.logger.Logger;
 import com.termful.shared.markdown.MarkdownUtils;
 import com.termful.shared.errors.Error;
@@ -28,7 +27,6 @@ import com.termful.shared.termux.TermuxUtils;
 import com.termful.shared.termux.shell.command.environment.TermuxShellEnvironment;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -64,6 +62,8 @@ import static com.termful.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DI
  */
 public final class TermuxInstaller {
     
+    private static final String LOG_TAG = "TermuxInstaller";
+    
     private static class NoBootstrapAvailableException extends RuntimeException {
         public NoBootstrapAvailableException(String message) {
             super(message);
@@ -90,8 +90,6 @@ public final class TermuxInstaller {
             }
         }
     }
-
-    private static final String LOG_TAG = "TermuxInstaller";
 
     /** Performs bootstrap setup if necessary. */
     static void setupBootstrapIfNeeded(final Activity activity, final Runnable whenDone) {

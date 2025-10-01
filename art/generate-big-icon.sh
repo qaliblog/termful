@@ -6,7 +6,7 @@ mkdir -p ~/termux-icons/
 
 vector2svg ../app/src/main/res/drawable/ic_launcher.xml ~/termux-icons/ic_launcher.svg
 
-sed -i "" 's/viewBox="0 0 108 108"/viewBox="18 18 72 72"/' ~/termux-icons/ic_launcher.svg
+sed -i 's/viewBox="0 0 108 108"/viewBox="18 18 72 72"/' ~/termux-icons/ic_launcher.svg
 
 SIZE=512
 rsvg-convert \

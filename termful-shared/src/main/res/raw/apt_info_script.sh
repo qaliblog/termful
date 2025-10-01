@@ -34,7 +34,7 @@ updatable_packages() {
 		apt update >/dev/null 2>&1
 		updatable=$(apt list --upgradable 2>/dev/null | tail -n +2)
 
-		if [ -z "$updatable" ];then
+		if [ -z "$updatable" ]; then
 			echo "All packages up to date"
 		else
 			echo $'```\n'"$updatable"$'\n```\n'
