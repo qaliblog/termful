@@ -230,7 +230,9 @@ def createMinimalBootstrap(String arch) {
     new File(tempDir, "etc/hosts").text = "127.0.0.1 localhost\n"
     
     // Create minimal shell script that indicates manual selector mode
-    new File(tempDir, "bin/sh").text = "#!/bin/sh\necho 'Termful Manual Distribution Selector - Minimal Bootstrap'\necho 'Use the app to select your preferred Linux distribution'\n"
+    def shellScript = new File(tempDir, "bin/sh")
+    shellScript.text = "#!/bin/sh\necho 'Termful Manual Distribution Selector - Minimal Bootstrap'\necho 'Use the app to select your preferred Linux distribution'\n"
+    shellScript.setExecutable(true)
     
     // Create SYMLINKS.txt for the installer
     new File(tempDir, "SYMLINKS.txt").text = "/bin/sh←bin/sh\n"

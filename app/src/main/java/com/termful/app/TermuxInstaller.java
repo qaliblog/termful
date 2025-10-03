@@ -244,6 +244,7 @@ public final class TermuxInstaller {
                                             zipEntryName.startsWith("usr/lib/apk/")) {
                                             //noinspection OctalInteger
                                             Os.chmod(targetFile.getAbsolutePath(), 0755);
+                                            TerminalLogger.logInfo(activity, LOG_TAG, "Set execute permissions (0755) for: " + zipEntryName);
                                         }
                                     }
                                 }
@@ -270,6 +271,19 @@ public final class TermuxInstaller {
                     }
 
                     TerminalLogger.logInfo(activity, LOG_TAG, "Bootstrap packages installed successfully.");
+                    
+                    // Ensure shell script has execute permissions (fallback)
+                    File shellScript = new File(TERMUX_PREFIX_DIR_PATH, "usr/bin/sh");
+                    if (shellScript.exists() && !shellScript.canExecute()) {
+                        TerminalLogger.logInfo(activity, LOG_TAG, "Setting execute permissions for shell script: " + shellScript.getAbsolutePath());
+                        try {
+                            Os.chmod(shellScript.getAbsolutePath(), 0755);
+                            TerminalLogger.logInfo(activity, LOG_TAG, "Successfully set execute permissions for shell script");
+                        } catch (Exception e) {
+                            TerminalLogger.logError(activity, LOG_TAG, "Failed to set execute permissions for shell script: " + e.getMessage());
+                        }
+                    }
+                    
                     TerminalLogger.logInfo(activity, LOG_TAG, "=== BOOTSTRAP INSTALLATION COMPLETED ===");
 
                     // Recreate env file since termux prefix was wiped earlier
