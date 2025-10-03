@@ -202,48 +202,49 @@ public final class TermuxInstaller {
                         BootstrapZipInputStream bootstrapStream = new BootstrapZipInputStream();
                         TerminalLogger.logInfo(activity, LOG_TAG, "Zip size from native library: " + bootstrapStream.totalSize + " bytes");
                         try (ZipInputStream zipInput = new ZipInputStream(bootstrapStream)) {
-                        ZipEntry zipEntry;
-                        while ((zipEntry = zipInput.getNextEntry()) != null) {
-                            if (zipEntry.getName().equals("SYMLINKS.txt")) {
-                                BufferedReader symlinksReader = new BufferedReader(new InputStreamReader(zipInput));
-                                String line;
-                                while ((line = symlinksReader.readLine()) != null) {
-                                    String[] parts = line.split("←");
-                                    if (parts.length != 2)
-                                        throw new RuntimeException("Malformed symlink line: " + line);
-                                    String oldPath = parts[0];
-                                    String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + parts[1];
-                                    symlinks.add(Pair.create(oldPath, newPath));
+                            ZipEntry zipEntry;
+                            while ((zipEntry = zipInput.getNextEntry()) != null) {
+                                if (zipEntry.getName().equals("SYMLINKS.txt")) {
+                                    BufferedReader symlinksReader = new BufferedReader(new InputStreamReader(zipInput));
+                                    String line;
+                                    while ((line = symlinksReader.readLine()) != null) {
+                                        String[] parts = line.split("←");
+                                        if (parts.length != 2)
+                                            throw new RuntimeException("Malformed symlink line: " + line);
+                                        String oldPath = parts[0];
+                                        String newPath = TERMUX_STAGING_PREFIX_DIR_PATH + "/" + parts[1];
+                                        symlinks.add(Pair.create(oldPath, newPath));
 
-                                    error = ensureDirectoryExists(new File(newPath).getParentFile());
+                                        error = ensureDirectoryExists(new File(newPath).getParentFile());
+                                        if (error != null) {
+                                            showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
+                                            return;
+                                        }
+                                    }
+                                } else {
+                                    String zipEntryName = zipEntry.getName();
+                                    File targetFile = new File(TERMUX_STAGING_PREFIX_DIR_PATH, zipEntryName);
+                                    boolean isDirectory = zipEntry.isDirectory();
+
+                                    error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
                                     if (error != null) {
                                         showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
                                         return;
                                     }
-                                }
-                            } else {
-                                String zipEntryName = zipEntry.getName();
-                                File targetFile = new File(TERMUX_STAGING_PREFIX_DIR_PATH, zipEntryName);
-                                boolean isDirectory = zipEntry.isDirectory();
 
-                                error = ensureDirectoryExists(isDirectory ? targetFile : targetFile.getParentFile());
-                                if (error != null) {
-                                    showBootstrapErrorDialog(activity, whenDone, Error.getErrorMarkdownString(error));
-                                    return;
-                                }
-
-                                if (!isDirectory) {
-                                    try (FileOutputStream outStream = new FileOutputStream(targetFile)) {
-                                        int readBytes;
-                                        while ((readBytes = zipInput.read(buffer)) != -1)
-                                            outStream.write(buffer, 0, readBytes);
-                                    }
-                                    if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("sbin/") || 
-                                        zipEntryName.startsWith("libexec") || zipEntryName.startsWith("usr/bin/") ||
-                                        zipEntryName.startsWith("usr/sbin/") || zipEntryName.startsWith("lib/apk/") ||
-                                        zipEntryName.startsWith("usr/lib/apk/")) {
-                                        //noinspection OctalInteger
-                                        Os.chmod(targetFile.getAbsolutePath(), 0755);
+                                    if (!isDirectory) {
+                                        try (FileOutputStream outStream = new FileOutputStream(targetFile)) {
+                                            int readBytes;
+                                            while ((readBytes = zipInput.read(buffer)) != -1)
+                                                outStream.write(buffer, 0, readBytes);
+                                        }
+                                        if (zipEntryName.startsWith("bin/") || zipEntryName.startsWith("sbin/") || 
+                                            zipEntryName.startsWith("libexec") || zipEntryName.startsWith("usr/bin/") ||
+                                            zipEntryName.startsWith("usr/sbin/") || zipEntryName.startsWith("lib/apk/") ||
+                                            zipEntryName.startsWith("usr/lib/apk/")) {
+                                            //noinspection OctalInteger
+                                            Os.chmod(targetFile.getAbsolutePath(), 0755);
+                                        }
                                     }
                                 }
                             }
