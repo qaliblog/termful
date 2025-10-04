@@ -29,6 +29,7 @@ public class DistributionSelectorActivity extends Activity {
     
     private ListView distributionListView;
     private Button downloadButton;
+    private Button selectButton;
     private String selectedDistribution = null;
     private String selectedDownloadUrl = null;
     
@@ -45,9 +46,11 @@ public class DistributionSelectorActivity extends Activity {
     private void initializeViews() {
         distributionListView = findViewById(R.id.distribution_list);
         downloadButton = findViewById(R.id.download_button);
+        selectButton = findViewById(R.id.select_button);
         
-        // Disable download button initially
+        // Disable buttons initially
         downloadButton.setEnabled(false);
+        selectButton.setEnabled(false);
     }
     
     private void setupDistributionList() {
@@ -77,6 +80,7 @@ public class DistributionSelectorActivity extends Activity {
             selectedDistribution = selectedDistro.getName();
             selectedDownloadUrl = selectedDistro.getDownloadUrl();
             downloadButton.setEnabled(true);
+            selectButton.setEnabled(true);
             
         });
     }
@@ -85,6 +89,12 @@ public class DistributionSelectorActivity extends Activity {
         downloadButton.setOnClickListener(v -> {
             if (selectedDistribution != null && selectedDownloadUrl != null) {
                 showDownloadConfirmation();
+            }
+        });
+        
+        selectButton.setOnClickListener(v -> {
+            if (selectedDistribution != null) {
+                showSelectFileConfirmation();
             }
         });
     }
@@ -96,6 +106,17 @@ public class DistributionSelectorActivity extends Activity {
                           " rootfs. After downloading, you can select the file in the next step.")
                .setPositiveButton("Download", (dialog, which) -> {
                    openDownloadUrl();
+               })
+               .setNegativeButton("Cancel", null)
+               .show();
+    }
+    
+    private void showSelectFileConfirmation() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Select " + selectedDistribution + " File")
+               .setMessage("Select the " + selectedDistribution + " rootfs file (.tar.gz, .zip, or .tar) that you have already downloaded.")
+               .setPositiveButton("Select File", (dialog, which) -> {
+                   openFilePicker();
                })
                .setNegativeButton("Cancel", null)
                .show();
