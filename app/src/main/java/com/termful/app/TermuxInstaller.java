@@ -242,9 +242,22 @@ public final class TermuxInstaller {
                                             zipEntryName.startsWith("libexec") || zipEntryName.startsWith("usr/bin/") ||
                                             zipEntryName.startsWith("usr/sbin/") || zipEntryName.startsWith("lib/apk/") ||
                                             zipEntryName.startsWith("usr/lib/apk/")) {
-                                            //noinspection OctalInteger
-                                            Os.chmod(targetFile.getAbsolutePath(), 0755);
-                                            TerminalLogger.logInfo(activity, LOG_TAG, "Set execute permissions (0755) for: " + zipEntryName);
+                                            TerminalLogger.logInfo(activity, LOG_TAG, "Setting execute permissions for: " + zipEntryName);
+                                            TerminalLogger.logInfo(activity, LOG_TAG, "Target file path: " + targetFile.getAbsolutePath());
+                                            TerminalLogger.logInfo(activity, LOG_TAG, "File exists before chmod: " + targetFile.exists());
+                                            
+                                            try {
+                                                //noinspection OctalInteger
+                                                Os.chmod(targetFile.getAbsolutePath(), 0755);
+                                                TerminalLogger.logInfo(activity, LOG_TAG, "Successfully set execute permissions (0755) for: " + zipEntryName);
+                                                
+                                                // Verify permissions were set
+                                                boolean canExecute = targetFile.canExecute();
+                                                TerminalLogger.logInfo(activity, LOG_TAG, "Verification - can execute after chmod: " + canExecute);
+                                                
+                                            } catch (Exception e) {
+                                                TerminalLogger.logError(activity, LOG_TAG, "Failed to set execute permissions for " + zipEntryName + ": " + e.getMessage());
+                                            }
                                         }
                                     }
                                 }
@@ -272,15 +285,59 @@ public final class TermuxInstaller {
 
                     TerminalLogger.logInfo(activity, LOG_TAG, "Bootstrap packages installed successfully.");
                     
+                    // Debug: List all files in the prefix directory
+                    TerminalLogger.logInfo(activity, LOG_TAG, "Listing all files in prefix directory: " + TERMUX_PREFIX_DIR_PATH);
+                    try {
+                        File prefixDir = new File(TERMUX_PREFIX_DIR_PATH);
+                        if (prefixDir.exists() && prefixDir.isDirectory()) {
+                            listDirectoryRecursively(activity, prefixDir, "", 0);
+                        } else {
+                            TerminalLogger.logError(activity, LOG_TAG, "Prefix directory does not exist or is not a directory");
+                        }
+                    } catch (Exception e) {
+                        TerminalLogger.logError(activity, LOG_TAG, "Failed to list prefix directory: " + e.getMessage());
+                    }
+                    
                     // Ensure shell script has execute permissions (fallback)
                     File shellScript = new File(TERMUX_PREFIX_DIR_PATH, "usr/bin/sh");
-                    if (shellScript.exists() && !shellScript.canExecute()) {
-                        TerminalLogger.logInfo(activity, LOG_TAG, "Setting execute permissions for shell script: " + shellScript.getAbsolutePath());
-                        try {
-                            Os.chmod(shellScript.getAbsolutePath(), 0755);
-                            TerminalLogger.logInfo(activity, LOG_TAG, "Successfully set execute permissions for shell script");
-                        } catch (Exception e) {
-                            TerminalLogger.logError(activity, LOG_TAG, "Failed to set execute permissions for shell script: " + e.getMessage());
+                    TerminalLogger.logInfo(activity, LOG_TAG, "Checking shell script permissions: " + shellScript.getAbsolutePath());
+                    TerminalLogger.logInfo(activity, LOG_TAG, "Shell script exists: " + shellScript.exists());
+                    if (shellScript.exists()) {
+                        TerminalLogger.logInfo(activity, LOG_TAG, "Shell script can read: " + shellScript.canRead());
+                        TerminalLogger.logInfo(activity, LOG_TAG, "Shell script can write: " + shellScript.canWrite());
+                        TerminalLogger.logInfo(activity, LOG_TAG, "Shell script can execute: " + shellScript.canExecute());
+                        TerminalLogger.logInfo(activity, LOG_TAG, "Shell script length: " + shellScript.length() + " bytes");
+                        
+                        if (!shellScript.canExecute()) {
+                            TerminalLogger.logInfo(activity, LOG_TAG, "Shell script is not executable, attempting to fix...");
+                            try {
+                                // Try Java File.setExecutable first
+                                boolean javaResult = shellScript.setExecutable(true);
+                                TerminalLogger.logInfo(activity, LOG_TAG, "Java setExecutable result: " + javaResult);
+                                
+                                // Try native chmod as well
+                                Os.chmod(shellScript.getAbsolutePath(), 0755);
+                                TerminalLogger.logInfo(activity, LOG_TAG, "Native chmod completed");
+                                
+                                // Check again
+                                TerminalLogger.logInfo(activity, LOG_TAG, "After fix - can execute: " + shellScript.canExecute());
+                                
+                            } catch (Exception e) {
+                                TerminalLogger.logError(activity, LOG_TAG, "Failed to set execute permissions for shell script: " + e.getMessage());
+                                TerminalLogger.logError(activity, LOG_TAG, "Exception type: " + e.getClass().getSimpleName());
+                            }
+                        } else {
+                            TerminalLogger.logInfo(activity, LOG_TAG, "Shell script already has execute permissions");
+                        }
+                    } else {
+                        TerminalLogger.logError(activity, LOG_TAG, "Shell script does not exist at: " + shellScript.getAbsolutePath());
+                        
+                        // Check if it exists in bin/ instead
+                        File altShellScript = new File(TERMUX_PREFIX_DIR_PATH, "bin/sh");
+                        TerminalLogger.logInfo(activity, LOG_TAG, "Checking alternative location: " + altShellScript.getAbsolutePath());
+                        TerminalLogger.logInfo(activity, LOG_TAG, "Alternative shell script exists: " + altShellScript.exists());
+                        if (altShellScript.exists()) {
+                            TerminalLogger.logInfo(activity, LOG_TAG, "Alternative shell script can execute: " + altShellScript.canExecute());
                         }
                     }
                     
@@ -590,6 +647,30 @@ public final class TermuxInstaller {
 
     private static Error ensureDirectoryExists(File directory) {
         return FileUtils.createDirectoryFile(directory.getAbsolutePath());
+    }
+    
+    private static void listDirectoryRecursively(Activity activity, File dir, String prefix, int depth) {
+        if (depth > 3) return; // Limit depth to avoid too much output
+        
+        try {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    String fileInfo = prefix + file.getName();
+                    if (file.isDirectory()) {
+                        fileInfo += "/";
+                        TerminalLogger.logInfo(activity, LOG_TAG, "DIR:  " + fileInfo);
+                        listDirectoryRecursively(activity, file, prefix + "  ", depth + 1);
+                    } else {
+                        fileInfo += " (" + file.length() + " bytes)";
+                        fileInfo += " [r:" + file.canRead() + " w:" + file.canWrite() + " x:" + file.canExecute() + "]";
+                        TerminalLogger.logInfo(activity, LOG_TAG, "FILE: " + fileInfo);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            TerminalLogger.logError(activity, LOG_TAG, "Error listing directory " + dir.getAbsolutePath() + ": " + e.getMessage());
+        }
     }
 
 
