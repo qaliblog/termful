@@ -123,10 +123,40 @@ public final class TerminalSession extends TerminalOutput {
     public void initializeEmulator(int columns, int rows, int cellWidthPixels, int cellHeightPixels) {
         mEmulator = new TerminalEmulator(this, columns, rows, cellWidthPixels, cellHeightPixels, mTranscriptRows, mClient);
 
+        // Debug: Print shell information before creating subprocess
+        System.out.println("=== TERMINAL SESSION DEBUG ===");
+        System.out.println("Shell path: " + mShellPath);
+        System.out.println("Current working directory: " + mCwd);
+        System.out.println("Shell args: " + java.util.Arrays.toString(mArgs));
+        System.out.println("Environment variables count: " + (mEnv != null ? mEnv.length : 0));
+        
+        // Check if shell file exists and has permissions
+        java.io.File shellFile = new java.io.File(mShellPath);
+        System.out.println("Shell file exists: " + shellFile.exists());
+        if (shellFile.exists()) {
+            System.out.println("Shell file can read: " + shellFile.canRead());
+            System.out.println("Shell file can write: " + shellFile.canWrite());
+            System.out.println("Shell file can execute: " + shellFile.canExecute());
+            System.out.println("Shell file length: " + shellFile.length() + " bytes");
+            System.out.println("Shell file absolute path: " + shellFile.getAbsolutePath());
+        } else {
+            System.out.println("ERROR: Shell file does not exist at: " + mShellPath);
+        }
+        System.out.println("=== END TERMINAL SESSION DEBUG ===");
+
         int[] processId = new int[1];
-        mTerminalFileDescriptor = JNI.createSubprocess(mShellPath, mCwd, mArgs, mEnv, processId, rows, columns, cellWidthPixels, cellHeightPixels);
-        mShellPid = processId[0];
-        mClient.setTerminalShellPid(this, mShellPid);
+        try {
+            System.out.println("Attempting to create subprocess...");
+            mTerminalFileDescriptor = JNI.createSubprocess(mShellPath, mCwd, mArgs, mEnv, processId, rows, columns, cellWidthPixels, cellHeightPixels);
+            System.out.println("Subprocess created successfully with PID: " + processId[0]);
+            mShellPid = processId[0];
+            mClient.setTerminalShellPid(this, mShellPid);
+        } catch (Exception e) {
+            System.out.println("ERROR: Failed to create subprocess: " + e.getMessage());
+            System.out.println("Exception type: " + e.getClass().getSimpleName());
+            e.printStackTrace();
+            throw e; // Re-throw to maintain original behavior
+        }
 
         final FileDescriptor terminalFileDescriptorWrapped = wrapFileDescriptor(mTerminalFileDescriptor, mClient);
 
