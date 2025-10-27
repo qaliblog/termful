@@ -105,7 +105,7 @@ jobs:
         echo "Package Variant: apk-android-7" >> build-info.txt
 
     - name: Upload debug APK artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: termful-debug-apk
         path: |
@@ -114,7 +114,7 @@ jobs:
         retention-days: 30
 
     - name: Upload release APK artifact  
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: termful-release-apk
         path: |
@@ -197,7 +197,7 @@ jobs:
       run: ./gradlew lint --stacktrace
 
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: test-results

@@ -124,7 +124,7 @@ jobs:
         ls -la build-output/*.apk >> build-output/BUILD_SUMMARY.md 2>/dev/null || echo "No APK files found" >> build-output/BUILD_SUMMARY.md
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: termful-apks
         path: build-output/

@@ -166,7 +166,7 @@ jobs:
         done
 
     - name: Upload ARM64 APK (Most Common)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: hashFiles('apk-outputs/arm64-v8a/*.apk') != ''
       with:
         name: termful-arm64-v8a
@@ -174,7 +174,7 @@ jobs:
         retention-days: 90
 
     - name: Upload ARM32 APK 
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: hashFiles('apk-outputs/armeabi-v7a/*.apk') != ''
       with:
         name: termful-armeabi-v7a
@@ -182,7 +182,7 @@ jobs:
         retention-days: 90
 
     - name: Upload x86_64 APK
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: hashFiles('apk-outputs/x86_64/*.apk') != ''
       with:
         name: termful-x86_64
@@ -190,7 +190,7 @@ jobs:
         retention-days: 90
 
     - name: Upload x86 APK
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: hashFiles('apk-outputs/x86/*.apk') != ''
       with:
         name: termful-x86
@@ -198,7 +198,7 @@ jobs:
         retention-days: 90
 
     - name: Upload Universal APK (if exists)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: hashFiles('apk-outputs/universal/*.apk') != ''
       with:
         name: termful-universal
